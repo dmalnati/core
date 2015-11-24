@@ -24,10 +24,13 @@ def evm_SetTimeout(cbFn, msTimeout):
 def evm_CancelTimeout(handle):
     tornado.ioloop.IOLoop.instance().remove_timeout(handle)
 
+def evm_MainLoopFinish():
+    tornado.ioloop.IOLoop.instance().stop()
+
 def evm_MainLoop(stopOnCtlC=True):
     if stopOnCtlC:
         def SignalHandler(signal, frame):
-            tornado.ioloop.IOLoop.instance().stop()
+            evm_MainLoopFinish()
 
         signal.signal(signal.SIGINT, SignalHandler)
 
