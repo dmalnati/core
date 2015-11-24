@@ -38,24 +38,22 @@ def Bridge(ws):
 
 
 def Main():
-    if len(sys.argv) != 3 and len(sys.argv) != 4:
+    if len(sys.argv) != 2 and len(sys.argv) != 3:
         print("Usage:")
-        print("       " + sys.argv[0] + " connect <url>")
-        print("       " + sys.argv[0] + " listen  <port> <path>")
+        print("       " + sys.argv[0] + " <url>         (to connect)")
+        print("       " + sys.argv[0] + " <port> <path> (to listen)")
         sys.exit(-1)
-
-    mode = sys.argv[1]
 
     handler   = Handler()
     wsNodeMgr = WSNodeMgr(handler)
 
-    if mode == "connect" and len(sys.argv) == 3:
-        url = sys.argv[2]
+    if len(sys.argv) == 2:
+        url = sys.argv[1]
 
         wsNodeMgr.connect(url)
-    elif mode == "listen" and len(sys.argv) == 4:
-        port = sys.argv[2]
-        path = sys.argv[3]
+    elif len(sys.argv) == 3:
+        port = sys.argv[1]
+        path = sys.argv[2]
 
         wsNodeMgr.listen(port, path)
     else:

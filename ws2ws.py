@@ -21,6 +21,8 @@ class Bridge(WSNodeMgrEventHandlerIface):
         self.wsFirst  = None
         self.wsSecond = None
 
+        self.timerHandle = None
+
         self.Start()
 
     def OnWebSocketConnectedOutbound(self, ws, userData):
@@ -81,7 +83,11 @@ class Bridge(WSNodeMgrEventHandlerIface):
         self.Restart(msDelay)
 
     def Restart(self, msDelay=5000):
-        evm_SetTimeout(self.RestartInternal, msDelay)
+        if not self.timerHandle:
+            def OnTimeout():
+                self.timerHandle = None
+                self.RestartInternal()
+            self.timerHandle = evm_SetTimeout(OnTimeout, msDelay)
 
     def RestartInternal(self):
         if self.handleSecond:

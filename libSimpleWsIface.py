@@ -198,6 +198,9 @@ class ManagedWSInbound(tornado.websocket.WebSocketHandler, WSIface):
         if hasattr(self, "close_code") == False:
             self.close_code = False
 
+    def check_origin(self, origin):
+        return True
+
     def open(self):
         ManagedWSInbound.HANDLER.AddWebSocketInbound(self)
         if not self.GetSuppressEvents():
