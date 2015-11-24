@@ -25,10 +25,17 @@ class WSIface():
     def GetMessage(self):
         return self.msg
 
+    def SetSuppressEvents(self, val):
+        self.suppressEvents = val
+
+    def GetSuppressEvents(self):
+        return self.suppressEvents
+
     # public
     def __init__(self, id, userData):
         self.SetUserData(userData)
         self.SetMessage("")
+        self.SetSuppressEvents(False)
         self.id = id
         self.timeFirstConnected = time.time()
 
@@ -56,6 +63,7 @@ class WSIface():
         self.write_message(msg)
 
     def Close(self):
+        self.SetSuppressEvents(True)
         self.close()
 
 
@@ -127,7 +135,11 @@ class WSNodeMgr():
     def connect(self, url, userData=None):
         mwso = ManagedWSOutbound(url, self.handler, userData)
         mwso.connect()
-        return True
+        return mwso
+
+    def connect_cancel(self, handle):
+        mwso = handle
+        mwso.connect_cancel()
 
     # can only do this once
     def listen(self, port, path):
@@ -188,15 +200,20 @@ class ManagedWSInbound(tornado.websocket.WebSocketHandler, WSIface):
 
     def open(self):
         ManagedWSInbound.HANDLER.AddWebSocketInbound(self)
-        ManagedWSInbound.HANDLER.OnWebSocketConnectedInbound(self)
+        if not self.GetSuppressEvents():
+            ManagedWSInbound.HANDLER.OnWebSocketConnectedInbound(self)
 
     def on_message(self, msg):
         self.SetMessage(msg)
-        ManagedWSInbound.HANDLER.OnWebSocketReadable(self, self.GetUserData())
+        if not self.GetSuppressEvents():
+            ManagedWSInbound.HANDLER.OnWebSocketReadable(self, \
+                                                         self.GetUserData())
 
     def on_close(self):
         ManagedWSInbound.HANDLER.RemWebSocketInbound(self)
-        ManagedWSInbound.HANDLER.OnWebSocketClosed(self, self.GetUserData())
+        if not self.GetSuppressEvents():
+            ManagedWSInbound.HANDLER.OnWebSocketClosed(self, \
+                                                       self.GetUserData())
 
 
 
@@ -211,9 +228,15 @@ class WSOutbound():
     @gen.coroutine
     def Connect(ws, url):
         try:
-            conn = yield tornado.websocket.websocket_connect(url)
+            fut = tornado.websocket.websocket_connect(url)
+            conn = yield fut
         except:
-            ws.on_error()
+            if not ws.cancelled:
+                ws.on_error()
+            return
+
+        if ws.cancelled:
+            conn.close()
             return
 
         ws.set_conn(conn)
@@ -226,16 +249,20 @@ class WSOutbound():
                 break
             ws.on_message(msg)
 
-    def __init__(self, url):
-        self.url  = url
-        self.conn = None
-
     # basically a private function to be called by Connect
     def set_conn(self, conn):
         self.conn = conn
 
+    def __init__(self, url):
+        self.url  = url
+        self.conn = None
+        self.cancelled = False
+
     def connect(self):
         WSOutbound.Connect(self, self.url)
+
+    def connect_cancel(self):
+        self.cancelled = True
 
     def write_message(self, msg):
         self.conn.write_message(msg)
@@ -298,18 +325,23 @@ class ManagedWSOutbound(WSOutbound, WSIface):
 
     def on_connect(self):
         self.handler.AddWebSocketOutbound(self)
-        self.handler.OnWebSocketConnectedOutbound(self, self.GetUserData())
+        if not self.GetSuppressEvents():
+            self.handler.OnWebSocketConnectedOutbound(self, \
+                                                      self.GetUserData())
 
     def on_message(self, msg):
         self.SetMessage(msg)
-        self.handler.OnWebSocketReadable(self, self.GetUserData())
+        if not self.GetSuppressEvents():
+            self.handler.OnWebSocketReadable(self, self.GetUserData())
 
     def on_close(self):
         self.handler.RemWebSocketOutbound(self)
-        self.handler.OnWebSocketClosed(self, self.GetUserData())
+        if not self.GetSuppressEvents():
+            self.handler.OnWebSocketClosed(self, self.GetUserData())
 
     def on_error(self):
-        self.handler.OnWebSocketError(self, self.GetUserData())
+        if not self.GetSuppressEvents():
+            self.handler.OnWebSocketError(self, self.GetUserData())
 
 
 

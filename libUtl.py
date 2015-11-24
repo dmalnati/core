@@ -7,6 +7,12 @@ import tornado.ioloop
 from tornado import gen
 
 
+#######################################################################
+#
+# Event Manager
+#
+#######################################################################
+
 def evm_PeriodicCallback(cbFn, msTimeout):
     tornado.ioloop.PeriodicCallback(cbFn, msTimeout).start()
 
@@ -18,8 +24,22 @@ def evm_SetTimeout(cbFn, msTimeout):
 def evm_CancelTimeout(handle):
     tornado.ioloop.IOLoop.instance().remove_timeout(handle)
 
-def evm_MainLoop():
+def evm_MainLoop(stopOnCtlC=True):
+    if stopOnCtlC:
+        def SignalHandler(signal, frame):
+            tornado.ioloop.IOLoop.instance().stop()
+
+        signal.signal(signal.SIGINT, SignalHandler)
+
     tornado.ioloop.IOLoop.instance().start()
+
+
+
+#######################################################################
+#
+# Keyboard interface
+#
+#######################################################################
 
 def HandleSignals():
     def SignalHandler(signal, frame):
@@ -36,15 +56,36 @@ def WatchStdin(cbFn):
     loop.add_handler(sys.stdin, Handler, tornado.ioloop.IOLoop.READ)
 
 
-
-
-
+#######################################################################
+#
+# Utility
+#
+#######################################################################
 
 def TimeNow():
     return datetime.datetime.now().time().isoformat()
 
 def Log(msg):
     print("[" + str(TimeNow()) + "]: " + msg)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

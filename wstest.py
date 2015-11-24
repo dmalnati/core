@@ -21,7 +21,9 @@ class Handler(WSNodeMgrEventHandlerIface):
         sys.exit(0)
 
     def OnWebSocketError(self, ws, userData):
+        print("Connection Refused")
         sys.exit(0)
+
 
 def Bridge(ws):
     def OnStdin():
@@ -36,8 +38,6 @@ def Bridge(ws):
 
 
 def Main():
-    HandleSignals()
-
     if len(sys.argv) != 3 and len(sys.argv) != 4:
         print("Usage:")
         print("       " + sys.argv[0] + " connect <url>")
