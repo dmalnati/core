@@ -5,6 +5,7 @@ import random
 
 import RPi.GPIO as GPIO
 
+sys.path.append("../lib")
 from libServo import *
 
 

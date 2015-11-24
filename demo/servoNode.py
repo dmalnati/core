@@ -4,6 +4,7 @@ import sys
 
 import RPi.GPIO as GPIO
 
+sys.path.append("../lib")
 from libUtl import *
 from libSimpleWsIface import *
 from libServo import *

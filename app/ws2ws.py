@@ -4,6 +4,7 @@ import sys
 
 from collections import deque
 
+sys.path.append("../lib")
 from libUtl import *
 from libSimpleWsIface import *
 

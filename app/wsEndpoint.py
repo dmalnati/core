@@ -2,6 +2,7 @@
 
 import sys
 
+sys.path.append("../lib")
 from libUtl import *
 from libSimpleWsIface import *
 
