@@ -19,7 +19,8 @@ class Handler(WSNodeMgrEventHandlerIface):
         self.LogState()
 
     def OnWebSocketReadable(self, ws, userData):
-        Log("readable: " + ws.GetId() + ", " + str(userData))
+        data = ws.Read()
+        Log("readable: " + ws.GetId() + ", " + str(userData) + ": " + data)
 
     def OnWebSocketClosed(self, ws, userData):
         Log("closed: " + ws.GetId() + ", " + str(userData))
@@ -37,28 +38,24 @@ def CullHandler(handler):
             id   = ws.GetId()
             secs = ws.GetTimeDurationConnectedSecs()
             print("Checking " + id + ": connected " + str(secs) + " secs")
-            if ws.GetTimeDurationConnectedSecs() > 3:
+            if ws.GetTimeDurationConnectedSecs() > 12:
                 print("Closing " + id)
                 ws.Close()
         Log("Cull Complete")
 
-    evm_PeriodicCallback(Timeout, 1000)
+    evm_PeriodicCallback(Timeout, 5000)
 
-
-def OnStdin(line):
-    print("stdin: " + line)
 
 
 def Main():
+    HandleSignals()
+
     if len(sys.argv) != 3:
         print("Usage: " + sys.argv[0] + " <port> <path>")
         sys.exit(-1)
 
     port = sys.argv[1]
     path = sys.argv[2]
-
-    HandleSignals()
-    HandleStdin(OnStdin)
 
     handler = Handler()
     wsNodeMgr = WSNodeMgr(handler)
@@ -75,7 +72,6 @@ def Main():
         wsNodeMgr.connect(wsUrl, "heynow")
 
     evm_SetTimeout(ConnectToSelf, 3500)
-
 
     evm_MainLoop()
 

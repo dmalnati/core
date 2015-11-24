@@ -21,22 +21,20 @@ def evm_CancelTimeout(handle):
 def evm_MainLoop():
     tornado.ioloop.IOLoop.instance().start()
 
-def SignalHandler(signal, frame):
-    print "Exiting via Ctl+C"
-    sys.exit(0);
-
 def HandleSignals():
+    def SignalHandler(signal, frame):
+        sys.exit(0);
+
     # handle ctl-c
     signal.signal(signal.SIGINT, SignalHandler)
 
-
-def HandleStdin(cbFn):
+def WatchStdin(cbFn):
     def Handler(fd, events):
-        line = sys.stdin.readline()
-        cbFn(line)
+        cbFn()
 
     loop = tornado.ioloop.IOLoop.instance()
     loop.add_handler(sys.stdin, Handler, tornado.ioloop.IOLoop.READ)
+
 
 
 

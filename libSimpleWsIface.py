@@ -124,7 +124,7 @@ class WSNodeMgr():
         self.handler = handler
         self.webApp = None
 
-    def connect(self, url, userData):
+    def connect(self, url, userData=None):
         mwso = ManagedWSOutbound(url, self.handler, userData)
         mwso.connect()
         return True
@@ -236,6 +236,9 @@ class WSOutbound():
 
     def connect(self):
         WSOutbound.Connect(self, self.url)
+
+    def write_message(self, msg):
+        self.conn.write_message(msg)
 
     def close(self):
         self.conn.close()
