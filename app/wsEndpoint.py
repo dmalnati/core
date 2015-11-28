@@ -3,9 +3,9 @@
 import sys
 import os
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'lib'))
-from libUtl import *
-from libSimpleWsIface import *
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', ''))
+from myLib.utl import *
+from myLib.ws import *
 
 
 class Handler(WSNodeMgrEventHandlerIface):

@@ -6,8 +6,8 @@ import os
 
 import RPi.GPIO as GPIO
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'lib'))
-from libServo import *
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', ''))
+from myLib.motor import *
 
 
 
