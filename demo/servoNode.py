@@ -1,10 +1,11 @@
 #!/usr/bin/python
 
 import sys
+import os
 
 import RPi.GPIO as GPIO
 
-sys.path.append("../lib")
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'lib'))
 from libUtl import *
 from libSimpleWsIface import *
 from libServo import *

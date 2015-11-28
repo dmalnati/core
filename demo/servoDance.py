@@ -2,10 +2,11 @@
 
 import sys
 import random
+import os
 
 import RPi.GPIO as GPIO
 
-sys.path.append("../lib")
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'lib'))
 from libServo import *
 
 
