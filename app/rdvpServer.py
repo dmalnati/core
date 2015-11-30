@@ -336,8 +336,9 @@ class RDVPServer(WSNodeMgrEventHandlerIface):
                            ws,
                            clientType,
                            jsonObjReq,
+                           registerClientOnOk=True,
                            sendAckOnOk=True,
-                           registerClientOnOk=True):
+                           honorClientAckRequest=True):
         retVal = True
 
         messageType = jsonObjReq["MESSAGE_TYPE"]
@@ -351,10 +352,17 @@ class RDVPServer(WSNodeMgrEventHandlerIface):
 
             self.SendNackAndClose(ws, messageType, errorText)
         else:
+            if registerClientOnOk:
+                self.RegisterClient(ws, clientType, clientId)
+
             if sendAckOnOk:
-                self.SendAck(ws, messageType)
-                if registerClientOnOk:
-                    self.RegisterClient(ws, clientType, clientId)
+                # allow client to request to not get an ACK.
+                # Useful for bridges to procs which don't speak the language.
+                if honorClientAckRequest:
+                    if "SUPPRESS_ACK_ON_OK" not in jsonObjReq:
+                        pass
+                else:
+                    self.SendAck(ws, messageType)
 
         return retVal
 
