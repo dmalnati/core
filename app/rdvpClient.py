@@ -25,7 +25,8 @@ class Handler(WSNodeMgrEventHandlerIface):
                 "MESSAGE_TYPE"  : "REQ_LOGIN_" + self.clientType,
                 "ID"            : self.clientId,
                 "PASSWORD"      : self.password,
-                "CONNECT_TO_ID" : self.scClientId
+                "CONNECT_TO_ID" : self.scClientId,
+                "ACK_ON_OK"     : 1
             }))
 
             Bridge(ws)
@@ -33,7 +34,8 @@ class Handler(WSNodeMgrEventHandlerIface):
             ws.Write(json.dumps({
                 "MESSAGE_TYPE"  : "REQ_LOGIN_" + self.clientType,
                 "ID"            : self.clientId,
-                "PASSWORD"      : self.password
+                "PASSWORD"      : self.password,
+                "ACK_ON_OK"     : 1
             }))
             ws.Write("queue this")
             ws.Write("and this")
@@ -51,7 +53,8 @@ class Handler(WSNodeMgrEventHandlerIface):
             ws.Write(json.dumps({
                 "MESSAGE_TYPE"  : "REQ_LOGIN_" + self.clientType,
                 "ID"            : self.clientId,
-                "PASSWORD"      : self.password
+                "PASSWORD"      : self.password,
+                "ACK_ON_OK"     : 1
             }))
 
             Bridge(ws)

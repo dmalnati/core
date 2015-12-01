@@ -25,8 +25,7 @@ class Handler(WSBridgeLoggerIface, WSBridge):
         self.GetWsSecond().Write(json.dumps({
             "MESSAGE_TYPE"       : "REQ_LOGIN_SC",
             "ID"                 : self.clientId,
-            "PASSWORD"           : self.password,
-            "SUPPRESS_ACK_ON_OK" : 1
+            "PASSWORD"           : self.password
         }))
 
 def Main():

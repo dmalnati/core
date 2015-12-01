@@ -55,7 +55,7 @@ function DialogLogInOnSubmit()
 
     wsAC.onmessage = function(event)
     {
-        Log("onmessage");
+        Log("AC onmessage (" + event.data + ")")
         OnAdminMessage(event.data)
     }
 
@@ -79,7 +79,7 @@ function OnAdminMessage(msg)
     acList     = jsonObj["AC_LIST"]
     bridgeList = jsonObj["CCSC_BRIDGE_LIST"]
 
-    PopulateContainer("scList", scList)
+    PopulateContainerSC("scList", scList)
     PopulateContainer("ccList", ccList)
     PopulateContainer("acList", acList)
     PopulateContainer("bridgeList", bridgeList)
@@ -97,9 +97,112 @@ function PopulateContainer(id, valList)
     }
 }
 
+function ConnectToSc(scId, clientId, password)
+{
+    Log("ConnectToSc")
+
+    var url = window.location.href;
+    var arr = url.split("/");
+    var hostAndPort = arr[2];
+    ws = new WebSocket("ws://" + hostAndPort + "/ws");
+
+    var domDialog = document.getElementById("scInterface")
+    var domScTo   = document.getElementById("scTo")
+    var domScFrom = document.getElementById("scFrom")
+    var domScSend = document.getElementById("scSend")
+    var domScClose = document.getElementById("scClose")
+    var domScStatus = document.getElementById("scStatus")
+
+    // Set up dialog values
+    domScTo.value = ""
+    domScFrom.value = ""
+    domScStatus.innerHTML = "Connecting..."
+
+    domScTo.onkeydown = function(event)
+    {
+        var keyCodeEnter = 13;
+
+        if (event.keyCode == keyCodeEnter)
+        {
+            domScSend.onclick()
+        }
+    }
+
+    domScClose.onclick = function()
+    {
+        ws.close()
+        domDialog.close()
+    }
+
+    domScSend.onclick = function()
+    {
+        ws.send(domScTo.value)
+        Log("sending: " + domScTo.value)
+        domScTo.value = ""
+    }
+
+    domScStatus.onclick = function()
+    {
+        Log("one")
+    }
+
+
+    // Set up callbacks
+    ws.onopen = function(event)
+    {
+        ws.send(JSON.stringify({
+            "MESSAGE_TYPE"  : "REQ_LOGIN_CC",
+            "ID"            : clientId,
+            "PASSWORD"      : password,
+            "CONNECT_TO_ID" : scId
+        }));
+
+        domScStatus.innerHTML = "Connected"
+    }
+
+    ws.onmessage = function(event)
+    {
+        Log("SC: onmessage(" + event.data + ")")
+        domScFrom.value += event.data + "\n"
+    }
+
+    ws.onclose = function(event)
+    {
+        domScStatus.innerHTML = "Closed"
+    }
+
+    ws.onerror = function(event)
+    {
+        domScStatus.innerHTML = "ERROR"
+    }
+
+    // Show dialog
+    //domDialog.showModal()
+    // if you use this, the handles above don't work correctly, seemingly
+    // in the circumstance where the non-modal content changes.
+    // EG if the main page changes (as a result of the AC socket getting
+    // updates, then seemingly it all goes haywire.
+    // Some kind of bug?
+
+    domDialog.show()
+}
+
+function PopulateContainerSC(id, valList)
+{
+    domContainer = document.getElementById(id)
+
+    domContainer.innerHTML = ""
+
+    for (i = 0; i < valList.length; ++i)
+    {
+        domContainer.innerHTML +=
+            "<span onclick='ConnectToSc(\"" + valList[i] + "\",\"pi2\",\"\");'>" + valList[i] + "</span>" + "<br/>"
+    }
+}
+
 function Log(str)
 {
-    document.body.innerHTML += str + "<br/>";
+    //document.body.innerHTML += str + "<br/>";
 }
         </script>
     </head>
@@ -135,6 +238,15 @@ function Log(str)
             <br/>
             <input type='button' value='Log In' id='dialogLogInSubmit' onclick='DialogLogInOnSubmit();'>
         </dialog>
+
+        <dialog id='scInterface'>
+            <input id='scTo' style='width: 100%;'><br/>
+            <textarea id='scFrom' rows='10' style='width: 100%;'></textarea><br/>
+            <input type=button id='scSend' value='send'><br/>
+            <input type=button id='scClose' value='close'><br/>
+            <div id='scStatus'></div>
+        </dialog>
+
     </body>
 </html>
 

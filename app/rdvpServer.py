@@ -337,8 +337,8 @@ class RDVPServer(WSNodeMgrEventHandlerIface):
                            clientType,
                            jsonObjReq,
                            registerClientOnOk=True,
-                           sendAckOnOk=True,
-                           honorClientAckRequest=True):
+                           ackIfRequested=True,
+                           forceAck=False):
         retVal = True
 
         messageType = jsonObjReq["MESSAGE_TYPE"]
@@ -352,17 +352,13 @@ class RDVPServer(WSNodeMgrEventHandlerIface):
 
             self.SendNackAndClose(ws, messageType, errorText)
         else:
+            # allow client to request to get an ACK.
+            if (ackIfRequested and "ACK_ON_OK" in jsonObjReq) or forceAck:
+                self.SendAck(ws, messageType)
+
             if registerClientOnOk:
                 self.RegisterClient(ws, clientType, clientId)
 
-            if sendAckOnOk:
-                # allow client to request to not get an ACK.
-                # Useful for bridges to procs which don't speak the language.
-                if honorClientAckRequest:
-                    if "SUPPRESS_ACK_ON_OK" not in jsonObjReq:
-                        pass
-                else:
-                    self.SendAck(ws, messageType)
 
         return retVal
 
@@ -384,7 +380,9 @@ class RDVPServer(WSNodeMgrEventHandlerIface):
 
                 # ensure connection not attempted to already-bridged SC
                 if not scClient.IsBridged():
-                    self.SendAck(ws, messageType)
+                    # allow client to request to get an ACK.
+                    if "ACK_ON_OK" in jsonObjReq:
+                        self.SendAck(ws, messageType)
 
                     self.RegisterClient(ws, "CC", clientId)
                     self.Bridge(clientId, connectToId)
@@ -401,7 +399,7 @@ class RDVPServer(WSNodeMgrEventHandlerIface):
 
 
     def HandleNewLoginAC(self, ws, jsonObjReq):
-        self.ValidateBasicLogin(ws, "AC", jsonObjReq)
+        self.ValidateBasicLogin(ws, "AC", jsonObjReq, True, True, True)
 
 
     def HandleNewLogin(self, ws, msg):
