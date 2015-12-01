@@ -129,6 +129,7 @@ class WSNodeMgr():
     def __init__(self, handler):
         self.handler = handler
         self.webApp = None
+        self.httpServer = None
 
     def connect(self, url, userData=None):
         mwso = ManagedWSOutbound(url, self.handler, userData)
@@ -140,23 +141,36 @@ class WSNodeMgr():
         mwso.connect_cancel()
 
     # can only do this once
-    def listen(self, port, path):
+    def listen(self, port, wsPath, localDirAsWebRoot=None):
         retVal = True
 
         if not self.webApp:
             ManagedWSInbound.SetHandler(self.handler)
 
-            self.webApp = tornado.web.Application([
-                (path, ManagedWSInbound)
-            ])
+            # unconditionally support websocket handler
+            handlerList = [
+                (wsPath, ManagedWSInbound)
+            ]
 
-            httpServer = tornado.httpserver.HTTPServer(self.webApp)
-            httpServer.listen(port)
+            # conditionally support http
+            if localDirAsWebRoot:
+                handlerList.append(
+                    (r"/(.*)",
+                     tornado.web.StaticFileHandler,
+                     {
+                        "path" : localDirAsWebRoot
+                     }
+                    )
+                )
+
+            self.webApp = tornado.web.Application(handlerList)
+
+            self.httpServer = tornado.httpserver.HTTPServer(self.webApp)
+            self.httpServer.listen(port)
         else:
             retVal = False
 
         return retVal
-
 
 
 

@@ -1,0 +1,148 @@
+<html>
+    <head>
+        <title>RDVP Server</title>
+
+        <style>
+table, tr, th, td {
+    border-collapse: collapse;
+}
+        </style>
+
+        <script>
+var wsAC = null;
+
+function OnLoad()
+{
+    document.getElementById("dialogLogIn").showModal()
+}
+
+function DialogLogInOnKeyDown(event)
+{
+    var keyCodeEnter = 13;
+
+    if (event.keyCode == keyCodeEnter)
+    {
+        var domClientId = document.getElementById("clientId");
+        var domPassword = document.getElementById("password");
+
+        document.getElementById("dialogLogInSubmit").click()
+    }
+}
+
+function DialogLogInOnSubmit()
+{
+    var url = window.location.href;
+    var arr = url.split("/");
+    var hostAndPort = arr[2];
+                    
+    clientId = document.getElementById("clientId").value
+    password = document.getElementById("password").value
+
+    document.getElementById("dialogLogIn").close()
+
+    wsAC = new WebSocket("ws://" + hostAndPort + "/ws");
+
+    wsAC.onopen = function(event)
+    {
+        Log("onopen");
+
+        wsAC.send(JSON.stringify({
+            "MESSAGE_TYPE" : "REQ_LOGIN_AC",
+            "ID"           : clientId,
+            "PASSWORD"     : password
+        }));
+    }
+
+    wsAC.onmessage = function(event)
+    {
+        Log("onmessage");
+        OnAdminMessage(event.data)
+    }
+
+    wsAC.onclose = function(event)
+    {
+        Log("onclose")
+    }
+
+    wsAC.onerror = function(event)
+    {
+        Log("onerror")
+    }
+}
+
+function OnAdminMessage(msg)
+{
+    jsonObj = JSON.parse(msg)
+
+    scList     = jsonObj["SC_LIST"]
+    ccList     = jsonObj["CC_LIST"]
+    acList     = jsonObj["AC_LIST"]
+    bridgeList = jsonObj["CCSC_BRIDGE_LIST"]
+
+    PopulateContainer("scList", scList)
+    PopulateContainer("ccList", ccList)
+    PopulateContainer("acList", acList)
+    PopulateContainer("bridgeList", bridgeList)
+}
+
+function PopulateContainer(id, valList)
+{
+    domContainer = document.getElementById(id)
+
+    domContainer.innerHTML = ""
+
+    for (i = 0; i < valList.length; ++i)
+    {
+        domContainer.innerHTML += valList[i] + "<br/>"
+    }
+}
+
+function Log(str)
+{
+    document.body.innerHTML += str + "<br/>";
+}
+        </script>
+    </head>
+
+    <body onload='OnLoad();'>
+
+        <table border=1>
+            <tr>
+                <th>SC</th>
+                <th>CC</th>
+                <th>AC</th>
+                <th>Bridge</th>
+            </tr>
+            <tr>
+                <td><div id='scList'></div></td>
+                <td><div id='ccList'></div></td>
+                <td><div id='acList'></div></td>
+                <td><div id='bridgeList'></div></td>
+            </tr>
+        </table>
+
+
+
+
+
+
+
+
+        <dialog id='dialogLogIn'>
+            <input type='text' id='clientId' placeholder='clientId' onkeydown='DialogLogInOnKeyDown(event);'>
+            <br/>
+            <input type='text' id='password' placeholder='password' onkeydown='DialogLogInOnKeyDown(event);'>
+            <br/>
+            <input type='button' value='Log In' id='dialogLogInSubmit' onclick='DialogLogInOnSubmit();'>
+        </dialog>
+    </body>
+</html>
+
+
+
+
+
+
+
+
+

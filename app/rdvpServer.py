@@ -462,19 +462,22 @@ class RDVPServer(WSNodeMgrEventHandlerIface):
 
 
 def Main():
-    if len(sys.argv) != 4:
-        print("Usage: " + sys.argv[0] + " <port> <path> <password>")
+    if len(sys.argv) != 5:
+        print("Usage: " +
+              sys.argv[0] +
+              " <port> <wsPath> <localDirAsWebRoot> <password>")
         sys.exit(-1)
 
-    port     = sys.argv[1]
-    path     = sys.argv[2]
-    password = sys.argv[3]
+    port              = sys.argv[1]
+    wsPath            = sys.argv[2]
+    localDirAsWebRoot = sys.argv[3]
+    password          = sys.argv[4]
 
     handler   = RDVPServer(password)
     wsNodeMgr = WSNodeMgr(handler)
 
     Log("RDVP Server Starting")
-    wsNodeMgr.listen(port, path)
+    wsNodeMgr.listen(port, wsPath, localDirAsWebRoot)
 
     evm_MainLoop()
 
