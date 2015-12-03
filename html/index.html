@@ -8,6 +8,8 @@ table, tr, th, td {
 }
         </style>
 
+        <script src='rdvp.js'></script>
+
         <script>
 var wsAC = null;
 
@@ -16,11 +18,11 @@ function OnLoad()
     document.getElementById("dialogLogIn").showModal()
 }
 
-function DialogLogInOnKeyDown(event)
+function DialogLogInOnKeyDown(evt)
 {
     var keyCodeEnter = 13;
 
-    if (event.keyCode == keyCodeEnter)
+    if (evt.keyCode == keyCodeEnter)
     {
         var domClientId = document.getElementById("clientId");
         var domPassword = document.getElementById("password");
@@ -31,40 +33,30 @@ function DialogLogInOnKeyDown(event)
 
 function DialogLogInOnSubmit()
 {
-    var url = window.location.href;
-    var arr = url.split("/");
-    var hostAndPort = arr[2];
-                    
     clientId = document.getElementById("clientId").value
     password = document.getElementById("password").value
 
     document.getElementById("dialogLogIn").close()
 
-    wsAC = new WebSocket("ws://" + hostAndPort + "/ws");
+    wsAC = RDVP_WebSocketThisHost("AC", clientId, password);
 
-    wsAC.onopen = function(event)
+    wsAC.onopen = function()
     {
         Log("onopen");
-
-        wsAC.send(JSON.stringify({
-            "MESSAGE_TYPE" : "REQ_LOGIN_AC",
-            "ID"           : clientId,
-            "PASSWORD"     : password
-        }));
     }
 
-    wsAC.onmessage = function(event)
+    wsAC.onmessage = function(evt)
     {
-        Log("AC onmessage (" + event.data + ")")
-        OnAdminMessage(event.data)
+        Log("AC onmessage (" + evt.data + ")")
+        OnAdminMessage(evt.data)
     }
 
-    wsAC.onclose = function(event)
+    wsAC.onclose = function(evt)
     {
         Log("onclose")
     }
 
-    wsAC.onerror = function(event)
+    wsAC.onerror = function(evt)
     {
         Log("onerror")
     }
@@ -101,10 +93,6 @@ function ConnectToSc(scId, clientId, password)
 {
     Log("ConnectToSc")
 
-    var url = window.location.href;
-    var arr = url.split("/");
-    var hostAndPort = arr[2];
-    ws = new WebSocket("ws://" + hostAndPort + "/ws");
 
     var domDialog = document.getElementById("scInterface")
     var domScTo   = document.getElementById("scTo")
@@ -118,11 +106,11 @@ function ConnectToSc(scId, clientId, password)
     domScFrom.value = ""
     domScStatus.innerHTML = "Connecting..."
 
-    domScTo.onkeydown = function(event)
+    domScTo.onkeydown = function(evt)
     {
         var keyCodeEnter = 13;
 
-        if (event.keyCode == keyCodeEnter)
+        if (evt.keyCode == keyCodeEnter)
         {
             domScSend.onclick()
         }
@@ -147,8 +135,11 @@ function ConnectToSc(scId, clientId, password)
     }
 
 
+    // Create websocket
+    var ws = RDVP_WebSocketThisHost("CC", clientId, password, scId);
+
     // Set up callbacks
-    ws.onopen = function(event)
+    ws.onopen = function(evt)
     {
         ws.send(JSON.stringify({
             "MESSAGE_TYPE"  : "REQ_LOGIN_CC",
@@ -160,18 +151,18 @@ function ConnectToSc(scId, clientId, password)
         domScStatus.innerHTML = "Connected"
     }
 
-    ws.onmessage = function(event)
+    ws.onmessage = function(evt)
     {
-        Log("SC: onmessage(" + event.data + ")")
-        domScFrom.value += event.data + "\n"
+        Log("SC: onmessage(" + evt.data + ")")
+        domScFrom.value += evt.data + "\n"
     }
 
-    ws.onclose = function(event)
+    ws.onclose = function(evt)
     {
         domScStatus.innerHTML = "Closed"
     }
 
-    ws.onerror = function(event)
+    ws.onerror = function(evt)
     {
         domScStatus.innerHTML = "ERROR"
     }
@@ -232,11 +223,20 @@ function Log(str)
 
 
         <dialog id='dialogLogIn'>
-            <input type='text' id='clientId' placeholder='clientId' onkeydown='DialogLogInOnKeyDown(event);'>
+            <input type='text'
+                   id='clientId'
+                   placeholder='clientId'
+                   onkeydown='DialogLogInOnKeyDown(evt);'>
             <br/>
-            <input type='text' id='password' placeholder='password' onkeydown='DialogLogInOnKeyDown(event);'>
+            <input type='text'
+                   id='password'
+                   placeholder='password'
+                   onkeydown='DialogLogInOnKeyDown(evt);'>
             <br/>
-            <input type='button' value='Log In' id='dialogLogInSubmit' onclick='DialogLogInOnSubmit();'>
+            <input type='button'
+                   value='Log In'
+                   id='dialogLogInSubmit'
+                   onclick='DialogLogInOnSubmit();'>
         </dialog>
 
         <dialog id='scInterface'>

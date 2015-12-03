@@ -1,0 +1,247 @@
+<html>
+    <head>
+        <title>WebRTC Basics</title>
+
+        <style>
+table, tr, th, td {
+    border-collapse: collapse;
+}
+        </style>
+
+        <script src='js/rdvp.js'></script>
+
+        <script src='webrtcTest.js'></script>
+        <script>
+
+// http://stackoverflow.com/questions/2090551/parse-query-string-in-javascript
+function getQueryVariable(variable) {
+    var query = window.location.search.substring(1);
+    var vars = query.split('&');
+    for (var i = 0; i < vars.length; i++) {
+        var pair = vars[i].split('=');
+        if (decodeURIComponent(pair[0]) == variable) {
+            return decodeURIComponent(pair[1]);
+        }
+    }
+
+    return null;
+}
+
+function SetIdValueToQueryVariable(id)
+{
+    var domElement = document.getElementById(id);
+    var qryVarVal  = getQueryVariable(id);
+
+    if (qryVarVal)
+    {
+        domElement.value = qryVarVal;
+    }
+}
+
+function ProcessArguments()
+{
+    SetIdValueToQueryVariable("clientId");
+    SetIdValueToQueryVariable("connectToId");
+
+    hideRow = getQueryVariable("hideRow");
+    if (hideRow)
+    {
+        var domElement = null;
+        if (hideRow == "offerer")
+        {
+            domElement = document.getElementById("rowOfferer");
+        }
+        else if (hideRow == "answerer")
+        {
+            domElement = document.getElementById("rowAnswerer");
+        }
+
+        if (domElement)
+        {
+            domElement.style.display = "none";
+        }
+    }
+}
+
+function OnLoad()
+{
+    ProcessArguments()
+}
+
+function PlaceStream(containerId, stream)
+{
+    domContainer = document.getElementById(containerId);
+
+    domVideo = document.createElement("video");
+
+    domVideo.autoplay = true;
+    domVideo.controls = true;
+    domVideo.muted    = true;
+
+    domVideo.style.width = "100%";
+
+    domVideo.src      = URL.createObjectURL(stream);
+
+    domContainer.appendChild(domVideo);
+}
+
+function OnLocalStream(stream)
+{
+    console.log("OnLocalStream");
+    PlaceStream("localStreamContainer", stream);
+}
+
+function OnWebRTCStream(stream)
+{
+    console.log("OnWebRTCStream");
+    PlaceStream("remoteStreamContainer", stream);
+}
+
+        </script>
+    </head>
+
+
+    <body onload='OnLoad();'>
+        WebRTC Basics
+
+        <br/>
+        <br/>
+
+        <table border=1>
+            <tr>
+                <th>action</th><th>interact</th><th>status</th>
+            </tr>
+
+            <tr>
+                <td>
+                    Connect to RDVP
+                </td>
+                <td>
+                    <input id='clientId' placeholder='clientId' size='8'>
+                    <input id='connectToId' placeholder='connectToId' size='8'>
+                    <input type='button'
+                           value='connect'
+                           onclick='OnClickConnect()'>
+                    <input type='button'
+                           value='disconnect'
+                           onclick='OnClickDisconnect()'>
+                </td>
+                <td>
+                    <span id='statusConnect'>
+                </td>
+            </tr>
+
+
+            <tr>
+                <td>
+                    Get User Media
+                </td>
+                <td>
+                    <input type='checkbox' id='gumAudio' checked> audio
+                    <input type='checkbox' id='gumVideo' checked> video
+                    <input type='button'
+                           value='getUserMedia'
+                           onclick='OnClickGetUserMedia()'>
+                </td>
+                <td>
+                </td>
+            </tr>
+
+
+            <tr id='rowOfferer'>
+                <td>
+                    RTC Peer Connection<br/>
+                    Offerer
+                </td>
+                <td>
+                    <input type='button'
+                           value='RTCPeerConnection'
+                           onclick='OnClickRTCPeerConnection()'>
+
+                    <input type='button'
+                           value='addStream'
+                           onclick='OnClickAddStream()'>
+
+                    <br/>
+
+                    <input type='button'
+                           value='createAndSendOffer'
+                           onclick='OnClickCreateAndSendOffer()'>
+
+                    <input type='button'
+                           value='processAnswer'
+                           onclick='OnClickProcessAnswer()'>
+
+                    <br/>
+
+                    <input type='button'
+                           value='sendMyIceCandidates'
+                           onclick='OnClickSendMyIceCandidates()'>
+
+                    <input type='button'
+                           value='processRemoteIceCandidates'
+                           onclick='OnClickProcessRemoteIceCandidates()'>
+                </td>
+                <td>
+                </td>
+            </tr>
+
+            <tr id='rowAnswerer'>
+                <td>
+                    RTC Peer Connection<br/>
+                    Answerer
+                </td>
+                <td>
+                    <input type='button'
+                           value='RTCPeerConnection'
+                           onclick='OnClickRTCPeerConnection()'>
+
+                    <input type='button'
+                           value='addStream'
+                           onclick='OnClickAddStream()'>
+
+                    <br/>
+
+                    <input type='button'
+                           value='createAndSendAnswer'
+                           onclick='OnClickCreateAndSendAnswer()'>
+
+                    <br/>
+
+                    <input type='button'
+                           value='sendMyIceCandidates'
+                           onclick='OnClickSendMyIceCandidates()'>
+
+                    <input type='button'
+                           value='processRemoteIceCandidates'
+                           onclick='OnClickProcessRemoteIceCandidates()'>
+                </td>
+                <td>
+                </td>
+            </tr>
+        </table>
+
+        <br/>
+        <br/>
+        <br/>
+
+        <table border=1 style='width: 100%;'>
+            <tr>
+                <th>Local</th><th>Remote</th>
+            </tr>
+            <tr>
+                <td style='width: 50%'><div id='localStreamContainer'></div></td>
+                <td style='width: 50%'><div id='remoteStreamContainer'></div></td>
+            </tr>
+        </table>
+    </body>
+</html>
+
+
+
+
+
+
+
+
+
