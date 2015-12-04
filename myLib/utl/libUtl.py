@@ -3,6 +3,8 @@ import sys
 import time
 import datetime
 
+import json
+
 import tornado.ioloop
 from tornado import gen
 
@@ -72,10 +74,11 @@ def Log(msg):
     print("[" + str(TimeNow()) + "]: " + msg)
 
 
-
-
-
-
+def GetPrettyJSON(jsonObj):
+    return json.dumps(jsonObj,
+                      sort_keys=True,
+                      indent=4,
+                      separators=(',', ': '))
 
 
 

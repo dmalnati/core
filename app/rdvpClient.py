@@ -22,20 +22,22 @@ class Handler(WSNodeMgrEventHandlerIface):
     def OnWebSocketConnectedOutbound(self, ws, userData):
         if self.clientType == "CC":
             ws.Write(json.dumps({
-                "MESSAGE_TYPE"  : "REQ_LOGIN_" + self.clientType,
-                "ID"            : self.clientId,
-                "PASSWORD"      : self.password,
-                "CONNECT_TO_ID" : self.scClientId,
-                "ACK_ON_OK"     : 1
+                "MESSAGE_TYPE"       : "REQ_LOGIN_" + self.clientType,
+                "ID"                 : self.clientId,
+                "PASSWORD"           : self.password,
+                "CONNECT_TO_ID"      : self.scClientId,
+                "ACK_ON_OK"          : 1,
+                "EVENT_ON_BRIDGE_UP" : 1
             }))
 
             Bridge(ws)
         elif self.clientType == "SC":
             ws.Write(json.dumps({
-                "MESSAGE_TYPE"  : "REQ_LOGIN_" + self.clientType,
-                "ID"            : self.clientId,
-                "PASSWORD"      : self.password,
-                "ACK_ON_OK"     : 1
+                "MESSAGE_TYPE"       : "REQ_LOGIN_" + self.clientType,
+                "ID"                 : self.clientId,
+                "PASSWORD"           : self.password,
+                "ACK_ON_OK"          : 1,
+                "EVENT_ON_BRIDGE_UP" : 1
             }))
             ws.Write("queue this")
             ws.Write("and this")
@@ -113,7 +115,7 @@ def Main():
         if (len(sys.argv) == 6):
             scClientId = sys.argv[5]
         else:
-            print("Err: Client Type SC must have scClientId argument")
+            print("Err: Client Type CC must have scClientId argument")
             sys.exit(-1)
 
     handler   = Handler(password, clientType, clientId, scClientId)

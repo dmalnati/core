@@ -8,7 +8,7 @@ table, tr, th, td {
 }
         </style>
 
-        <script src='rdvp.js'></script>
+        <script src='js/rdvp.js'></script>
 
         <script>
 var wsAC = null;
@@ -48,7 +48,13 @@ function DialogLogInOnSubmit()
     wsAC.onmessage = function(evt)
     {
         Log("AC onmessage (" + evt.data + ")")
-        OnAdminMessage(evt.data)
+
+        jsonObj = JSON.parse(evt.data);
+
+        if (jsonObj["MESSAGE_TYPE"] != "REP_LOGIN_AC")
+        {
+            OnAdminMessage(jsonObj);
+        }
     }
 
     wsAC.onclose = function(evt)
@@ -62,10 +68,8 @@ function DialogLogInOnSubmit()
     }
 }
 
-function OnAdminMessage(msg)
+function OnAdminMessage(jsonObj)
 {
-    jsonObj = JSON.parse(msg)
-
     scList     = jsonObj["SC_LIST"]
     ccList     = jsonObj["CC_LIST"]
     acList     = jsonObj["AC_LIST"]

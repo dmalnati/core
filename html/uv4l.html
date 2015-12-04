@@ -1,0 +1,241 @@
+<html>
+    <head>
+        <title>UV4L Interface</title>
+
+        <style>
+table, tr, th, td {
+    border-collapse: collapse;
+}
+
+button {
+    width: 55px;
+    height: 55px;
+}
+        </style>
+
+        <script src='js/rdvp.js'></script>
+        <script src='js/webrtc.js'></script>
+
+        <script>
+
+
+function PlaceStream(containerId, stream)
+{
+    domContainer = document.getElementById(containerId);
+
+    domVideo = document.createElement("video");
+
+    domVideo.autoplay = true;
+    domVideo.controls = true;
+    domVideo.muted    = true;
+
+    domVideo.style.width = "100%";
+
+    domVideo.src = URL.createObjectURL(stream);
+
+    domContainer.appendChild(domVideo);
+}
+
+
+function OnWebRTCStream(stream)
+{
+    console.log("OnWebRTCStream");
+    PlaceStream("remoteStreamContainer", stream);
+}
+
+function OnWebRTCStreamEnd()
+{
+    document.getElementById("remoteStreamContainer").innerHTML = "";
+}
+
+function OnClickConnect()
+{
+
+    OnStartServo(
+        document.getElementById("clientIdServo").value,
+        document.getElementById("connectToIdServo").value,
+        document.getElementById("passwordServo").value
+    );
+
+    OnStartWebRTC(
+        document.getElementById("clientIdWebRTC").value,
+        document.getElementById("connectToIdWebRTC").value,
+        document.getElementById("passwordWebRTC").value
+    );
+
+}
+
+
+function OnServoPct(button)
+{
+    if (servoButtonsActive)
+    {
+        var pct = parseFloat(button.innerHTML);
+
+        wsServo.send(pct);
+    }
+}
+
+var servoButtonsActive = false;
+function ActivateServoButtons()
+{
+    servoButtonsActive = true;
+
+    document.getElementById("buttonBorder").style.borderColor = "green";
+}
+
+function DeactivateServoButtons()
+{
+    servoButtonsActive = false;
+
+    document.getElementById("buttonBorder").style.borderColor = "red";
+}
+
+var wsServo = null;
+function OnStartServo(clientId, connectToId, password)
+{
+    ws = RDVP_WebSocketThisHost("CC", clientId, password, connectToId);
+    ws.onopen = function() {
+        ActivateServoButtons();
+    }
+
+    ws.onclose = function() {
+        DeactivateServoButtons();
+    }
+
+    wsServo = ws;
+}
+
+var wsWebRTC = null;
+var wrtcr = null;
+function OnStartWebRTC(clientId, connectToId, password)
+{
+
+    navigator.getUserMedia = navigator.getUserMedia ||
+                             navigator.webkitGetUserMedia;
+
+    var constraints = {
+        audio: true,
+        video: true
+    };
+
+    navigator.getUserMedia(
+        constraints,
+        function OnSuccess(streamLocal) {
+            ws = RDVP_WebSocketThisHost("CC", clientId, password, connectToId);
+
+            ws.onopen = function() {
+                wrtcr = WebRTC_Receiver(ws, streamLocal, {
+                    OnStreamAdded: function(stream) {
+                        OnWebRTCStream(stream);
+                    },
+
+                    OnStreamRemoved: function() {
+                        OnWebRTCStreamEnd();
+                    }
+                });
+            }
+
+            wsWebRTC = ws;
+        }, function OnFailure(err) {
+            console.log("ERR: Could not get user media: " + err);
+        }
+    );
+}
+
+function OnClickDisconnect()
+{
+    if (wsWebRTC) { wsWebRTC.close(); }
+    if (wsServo) { wsServo.close(); }
+
+    OnWebRTCStreamEnd();
+}
+
+
+function OnLoad()
+{
+}
+
+        </script>
+    </head>
+
+    <body onload='OnLoad();'>
+
+
+        <table border=1>
+            <tr>
+                <th>Ctl</th>
+                <th>ID</th>
+                <th>Service</th>
+                <th>PW</th>
+            </tr>
+            <tr>
+                <td>WebRTC</td>
+                <td>
+        <input id='clientIdWebRTC' value='OP1' size='8'>
+                </td>
+                <td>
+        <input id='connectToIdWebRTC' value='UV4L' size='8'>
+                </td>
+                <td>
+        <input id='passwordWebRTC' value='' size='8'>
+                </td>
+            </tr>
+            <tr>
+                <td>Servo</td>
+                <td>
+        <input id='clientIdServo' value='OP2' size='8'>
+                </td>
+                <td>
+        <input id='connectToIdServo' value='SERVO' size='8'>
+                </td>
+                <td>
+        <input id='passwordServo' value='' size='8'>
+                </td>
+            </tr>
+        </table>
+
+        <br/>
+
+        <input type='button'
+               value='connect'
+               onclick='OnClickConnect()'>
+        <input type='button'
+               value='disconnect'
+               onclick='OnClickDisconnect()'>
+
+        <br/>
+        <br/>
+
+        <table id='buttonBorder' style='border: 1px solid red;'>
+        <tr>
+        <td><button onclick='OnServoPct(this);'>0</button></td>
+        <td><button onclick='OnServoPct(this);'>10</button></td>
+        <td><button onclick='OnServoPct(this);'>20</button></td>
+        <td><button onclick='OnServoPct(this);'>30</button></td>
+        <td><button onclick='OnServoPct(this);'>40</button></td>
+        <td><button onclick='OnServoPct(this);'>50</button></td>
+        <td><button onclick='OnServoPct(this);'>60</button></td>
+        <td><button onclick='OnServoPct(this);'>70</button></td>
+        <td><button onclick='OnServoPct(this);'>80</button></td>
+        <td><button onclick='OnServoPct(this);'>90</button></td>
+        <td><button onclick='OnServoPct(this);'>100</button></td>
+        </tr>
+        </table>
+
+
+        <br/>
+        <br/>
+
+        <div id='remoteStreamContainer'></div>
+    </body>
+</html>
+
+
+
+
+
+
+
+
+

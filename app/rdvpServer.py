@@ -60,7 +60,15 @@ class RDVPClient():
 
         self.msgQueue = deque()
 
+        self.wantsEventOnBridgeUp = False
+
         self.bridgedPair = None
+
+    def SetWantsEventOnBridgeUp(self):
+        self.wantsEventOnBridgeUp = True
+
+    def GetWantsEventOnBridgeUp(self):
+        return self.wantsEventOnBridgeUp
 
     def GetClientType(self):
         return self.clientType
@@ -124,6 +132,16 @@ class RDVPServer(WSNodeMgrEventHandlerIface):
 
         cc.SetBridgedPair(sc)
         sc.SetBridgedPair(cc)
+
+        if cc.GetWantsEventOnBridgeUp():
+            self.SendEventOnBridgeUp(cc.GetWs(),
+                                     cc.GetClientId(),
+                                     sc.GetClientId())
+
+        if sc.GetWantsEventOnBridgeUp():
+            self.SendEventOnBridgeUp(sc.GetWs(),
+                                     cc.GetClientId(),
+                                     sc.GetClientId())
 
         self.BroadcastAdminData({
             "CCSC_BRIDGE_LIST_INSERT" : [[cc.GetClientId(), sc.GetClientId()]]
@@ -332,6 +350,13 @@ class RDVPServer(WSNodeMgrEventHandlerIface):
 
         ws.Close()
 
+    def SendEventOnBridgeUp(self, ws, ccId, scId):
+        ws.Write(json.dumps({
+            "MESSAGE_TYPE" : "EVENT_BRIDGE_UP",
+            "CC_ID"        : ccId,
+            "SC_ID"        : scId,
+        }))
+
     def ValidateBasicLogin(self,
                            ws,
                            clientType,
@@ -359,6 +384,10 @@ class RDVPServer(WSNodeMgrEventHandlerIface):
             if registerClientOnOk:
                 self.RegisterClient(ws, clientType, clientId)
 
+                if "EVENT_ON_BRIDGE_UP" in jsonObjReq:
+                    client = self.GetClientByTypeId(clientType, clientId)
+                    client.SetWantsEventOnBridgeUp()
+
 
         return retVal
 
@@ -385,6 +414,11 @@ class RDVPServer(WSNodeMgrEventHandlerIface):
                         self.SendAck(ws, messageType)
 
                     self.RegisterClient(ws, "CC", clientId)
+
+                    if "EVENT_ON_BRIDGE_UP" in jsonObjReq:
+                        client = self.GetClientByTypeId("CC", clientId)
+                        client.SetWantsEventOnBridgeUp()
+
                     self.Bridge(clientId, connectToId)
                 else:
                     errorText = "Attempted to connect to SC(" + \
