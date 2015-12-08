@@ -494,10 +494,11 @@ class RDVPServer(WSNodeMgrEventHandlerIface):
 
 
 def Main():
-    if len(sys.argv) != 5:
+    if len(sys.argv) != 5 and len(sys.argv) != 8:
         print("Usage: " +
               sys.argv[0] +
-              " <port> <wsPath> <localDirAsWebRoot> <password>")
+              " <port> <wsPath> <localDirAsWebRoot> <password>" +
+              " [<sslPort> <certFile> <keyFile>]")
         sys.exit(-1)
 
     port              = sys.argv[1]
@@ -505,11 +506,26 @@ def Main():
     localDirAsWebRoot = sys.argv[3]
     password          = sys.argv[4]
 
+
     handler   = RDVPServer(password)
     wsNodeMgr = WSNodeMgr(handler)
 
-    Log("RDVP Server Starting")
-    wsNodeMgr.listen(port, wsPath, localDirAsWebRoot)
+    if len(sys.argv) == 5:
+        Log("RDVP Server Starting on port " + port)
+        wsNodeMgr.listen(port, wsPath, localDirAsWebRoot)
+    else:
+        sslPort  = sys.argv[5]
+        certFile = sys.argv[6]
+        keyFile  = sys.argv[7]
+
+        Log("RDVP Server Starting on port " + port +
+            ", ssl on port " + sslPort)
+        wsNodeMgr.listen(port, wsPath, localDirAsWebRoot, {
+            "sslPort"     : sslPort,
+            "sslCertFile" : certFile,
+            "sslKeyFile"  : keyFile
+        })
+        
 
     evm_MainLoop()
 

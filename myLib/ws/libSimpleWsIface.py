@@ -129,7 +129,6 @@ class WSNodeMgr():
     def __init__(self, handler):
         self.handler = handler
         self.webApp = None
-        self.httpServer = None
 
     def connect(self, url, userData=None):
         mwso = ManagedWSOutbound(url, self.handler, userData)
@@ -141,7 +140,7 @@ class WSNodeMgr():
         mwso.connect_cancel()
 
     # can only do this once
-    def listen(self, port, wsPath, localDirAsWebRoot=None):
+    def listen(self, port, wsPath, localDirAsWebRoot=None, sslOptions=None):
         retVal = True
 
         if not self.webApp:
@@ -165,8 +164,22 @@ class WSNodeMgr():
 
             self.webApp = tornado.web.Application(handlerList)
 
-            self.httpServer = tornado.httpserver.HTTPServer(self.webApp)
-            self.httpServer.listen(port)
+            httpServer = tornado.httpserver.HTTPServer(self.webApp)
+            httpServer.listen(port)
+
+            if sslOptions:
+                sslPort     = sslOptions["sslPort"]
+                sslCertFile = sslOptions["sslCertFile"]
+                sslKeyFile  = sslOptions["sslKeyFile"]
+
+                sslHttpServer = tornado.httpserver.HTTPServer(self.webApp,
+                                                              ssl_options={
+                    "certfile" : sslCertFile,
+                    "keyfile"  : sslKeyFile
+                })
+
+                sslHttpServer.listen(sslPort)
+
         else:
             retVal = False
 
