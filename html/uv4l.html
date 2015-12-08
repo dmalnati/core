@@ -2,6 +2,8 @@
     <head>
         <title>UV4L Interface</title>
 
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
         <style>
 table, tr, th, td {
     border-collapse: collapse;
@@ -48,33 +50,34 @@ function OnWebRTCStreamEnd()
     document.getElementById("remoteStreamContainer").innerHTML = "";
 }
 
-function OnClickConnect()
+function OnClickConnectRTC()
 {
-
-    OnStartServo(
-        document.getElementById("clientIdServo").value,
-        document.getElementById("connectToIdServo").value,
-        document.getElementById("passwordServo").value
-    );
-
     OnStartWebRTC(
         document.getElementById("clientIdWebRTC").value,
         document.getElementById("connectToIdWebRTC").value,
-        document.getElementById("passwordWebRTC").value
+        document.getElementById("passwordWebRTC").value,
+        function OnOpen() {
+            document.getElementById("rtcStatus").style.backgroundColor = "green";
+        }, function OnClose() {
+            document.getElementById("rtcStatus").style.backgroundColor = "red";
+        }
     );
-
 }
 
-
-function OnServoPct(button)
+function OnClickConnectServo()
 {
-    if (servoButtonsActive)
-    {
-        var pct = parseFloat(button.innerHTML);
-
-        wsServo.send(pct);
-    }
+    OnStartServo(
+        document.getElementById("clientIdServo").value,
+        document.getElementById("connectToIdServo").value,
+        document.getElementById("passwordServo").value,
+        function OnOpen(ws) {
+            document.getElementById("servoStatus").style.backgroundColor = "green";
+        }, function OnClose() {
+            document.getElementById("servoStatus").style.backgroundColor = "red";
+        }
+    );
 }
+
 
 var servoButtonsActive = false;
 function ActivateServoButtons()
@@ -92,15 +95,15 @@ function DeactivateServoButtons()
 }
 
 var wsServo = null;
-function OnStartServo(clientId, connectToId, password)
+function OnStartServo(clientId, connectToId, password, cbOpen, cbClose)
 {
     ws = RDVP_WebSocketThisHost("CC", clientId, password, connectToId);
     ws.onopen = function() {
-        ActivateServoButtons();
+        cbOpen();
     }
 
     ws.onclose = function() {
-        DeactivateServoButtons();
+        cbClose();
     }
 
     wsServo = ws;
@@ -108,7 +111,7 @@ function OnStartServo(clientId, connectToId, password)
 
 var wsWebRTC = null;
 var wrtcr = null;
-function OnStartWebRTC(clientId, connectToId, password)
+function OnStartWebRTC(clientId, connectToId, password, cbOpen, cbClose)
 {
 
     navigator.getUserMedia = navigator.getUserMedia ||
@@ -119,10 +122,12 @@ function OnStartWebRTC(clientId, connectToId, password)
         video: true
     };
 
-    navigator.getUserMedia(
-        constraints,
-        function OnSuccess(streamLocal) {
+//    navigator.getUserMedia(
+//        constraints,
+//        function OnSuccess(streamLocal) {
             ws = RDVP_WebSocketThisHost("CC", clientId, password, connectToId);
+
+            streamLocal = null;
 
             ws.onopen = function() {
                 wrtcr = WebRTC_Receiver(ws, streamLocal, {
@@ -132,28 +137,72 @@ function OnStartWebRTC(clientId, connectToId, password)
 
                     OnStreamRemoved: function() {
                         OnWebRTCStreamEnd();
+
+                        cbClose()
                     }
                 });
+
+                cbOpen();
             }
 
             wsWebRTC = ws;
-        }, function OnFailure(err) {
-            console.log("ERR: Could not get user media: " + err);
-        }
-    );
+//        }, function OnFailure(err) {
+//            console.log("ERR: Could not get user media: " + err);
+//        }
+//    );
 }
 
-function OnClickDisconnect()
+function OnClickDisconnectRTC()
 {
     if (wsWebRTC) { wsWebRTC.close(); }
-    if (wsServo) { wsServo.close(); }
 
     OnWebRTCStreamEnd();
+}
+
+function OnClickDisconnectServo()
+{
+    if (wsServo) { wsServo.close(); }
+}
+
+
+
+function GetRadioButtonVal(name)
+{
+    domElList = document.getElementsByName(name);
+
+    for (var i = 0; i < domElList.length; ++i)
+    {
+        if (domElList[i].checked)
+        {
+            return domElList[i].value;
+        }
+    }
+}
+
+function OnOrientation(evt)
+{
+    if (wsServo && GetRadioButtonVal("ctlType") == "orientation")
+    {
+        wsServo.send(evt.gamma);
+    }
+
+    document.getElementById("orientationVal").innerHTML = evt.gamma;
+}
+
+function OnRangeVal(val)
+{
+    if (wsServo && GetRadioButtonVal("ctlType") == "range")
+    {
+        wsServo.send(val);
+    }
+
+    document.getElementById("rangeVal").innerHTML = val;
 }
 
 
 function OnLoad()
 {
+    window.addEventListener('deviceorientation', OnOrientation, false);
 }
 
         </script>
@@ -168,6 +217,8 @@ function OnLoad()
                 <th>ID</th>
                 <th>Service</th>
                 <th>PW</th>
+                <th>Action</th>
+                <th>Status</th>
             </tr>
             <tr>
                 <td>WebRTC</td>
@@ -179,6 +230,12 @@ function OnLoad()
                 </td>
                 <td>
         <input id='passwordWebRTC' value='' size='8'>
+                </td>
+                <td>
+        <input type='button' value='connect' onclick='OnClickConnectRTC()'>
+        <input type='button' value='disconnect' onclick='OnClickDisconnectRTC()'>
+                </td>
+                <td id='rtcStatus' style='background-color: red;'>
                 </td>
             </tr>
             <tr>
@@ -192,39 +249,40 @@ function OnLoad()
                 <td>
         <input id='passwordServo' value='' size='8'>
                 </td>
+                <td>
+        <input type='button' value='connect' onclick='OnClickConnectServo()'>
+        <input type='button' value='disconnect' onclick='OnClickDisconnectServo()'>
+                </td>
+                <td id='servoStatus' style='background-color: red;'>
+                </td>
             </tr>
         </table>
 
         <br/>
 
-        <input type='button'
-               value='connect'
-               onclick='OnClickConnect()'>
-        <input type='button'
-               value='disconnect'
-               onclick='OnClickDisconnect()'>
-
-        <br/>
-        <br/>
-
-        <table id='buttonBorder' style='border: 1px solid red;'>
-        <tr>
-        <td><button onclick='OnServoPct(this);'>0</button></td>
-        <td><button onclick='OnServoPct(this);'>10</button></td>
-        <td><button onclick='OnServoPct(this);'>20</button></td>
-        <td><button onclick='OnServoPct(this);'>30</button></td>
-        <td><button onclick='OnServoPct(this);'>40</button></td>
-        <td><button onclick='OnServoPct(this);'>50</button></td>
-        <td><button onclick='OnServoPct(this);'>60</button></td>
-        <td><button onclick='OnServoPct(this);'>70</button></td>
-        <td><button onclick='OnServoPct(this);'>80</button></td>
-        <td><button onclick='OnServoPct(this);'>90</button></td>
-        <td><button onclick='OnServoPct(this);'>100</button></td>
-        </tr>
+        Camera Control
+        <table border=1>
+            <tr>
+                <th>use</th>
+                <th>input</th>
+                <th>value</th>
+            </tr>
+            <tr>
+                <td><input type='radio' name='ctlType' value='orientation'></input></td>
+                <td></td>
+                <td><div id='orientationVal'>0</div></td>
+            </tr>
+            <tr>
+                <td><input type='radio' name='ctlType' value='range' checked></input></td>
+                <td>
+                    <input type='range' min='-90' max='90' step='1' value='0'
+                           oninput='OnRangeVal(this.value);'
+                           ></input>
+                </td>
+                <td><div id='rangeVal'>0</div></td>
+            </tr>
         </table>
 
-
-        <br/>
         <br/>
 
         <div id='remoteStreamContainer'></div>

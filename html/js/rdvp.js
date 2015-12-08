@@ -13,7 +13,13 @@ function RDVP_WebSocketThisHost(clientType, clientId, password, connectToId)
     var arr         = browserUrl.split("/");
     var hostAndPort = arr[2];
 
-    var wsUrl = "ws://" + hostAndPort + "/ws";
+    var wsType = "ws";
+    if (arr[0] == "https:")
+    {
+        wsType = "wss";
+    }
+
+    var wsUrl = wsType + "://" + hostAndPort + "/ws";
 
     return new RDVP_WebSocket(wsUrl,
                               clientType,
