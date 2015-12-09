@@ -227,6 +227,8 @@ class ManagedWSInbound(tornado.websocket.WebSocketHandler, WSIface):
         return True
 
     def open(self):
+        self.set_nodelay(True)
+
         ManagedWSInbound.HANDLER.AddWebSocketInbound(self)
         if not self.GetSuppressEvents():
             ManagedWSInbound.HANDLER.OnWebSocketConnectedInbound(self)
