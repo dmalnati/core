@@ -15,6 +15,12 @@ button {
 }
         </style>
 
+        <!-- THREE.js libs, needed for helping with orientation -->
+        <script src="js/third-party/threejs.r73/three.js"></script>
+        <script src="js/third-party/threejs.r73/DeviceOrientationControls.js">
+        </script>
+        <script src="js/orientation.js"></script>
+
         <script src='js/rdvp.js'></script>
         <script src='js/webrtc.js'></script>
 
@@ -179,30 +185,96 @@ function GetRadioButtonVal(name)
     }
 }
 
-function OnOrientation(evt)
-{
-    if (wsServo && GetRadioButtonVal("ctlType") == "orientation")
-    {
-        wsServo.send(evt.gamma);
-    }
 
-    document.getElementById("orientationVal").innerHTML = evt.gamma;
+var pubLast = 0;
+function PublishToServo(val, domId)
+{
+    val = val.toFixed(1);
+
+    if (pubLast)
+    {
+        if (Math.abs(val - pubLast) >= 0.5)
+        {
+            wsServo.send(val);
+
+            pubLast = val;
+        }
+        else
+        {
+            console.log("discarded " + val.toFixed(1) + ", same as before");
+        }
+    }
+    else
+    {
+        pubLast = val;
+    }
+}
+
+
+function ResetOrientationOffset()
+{
+    changeObjRef = changeObjNew;
+}
+
+var changeObjRef = null;
+var changeObjNew = null;
+function SetUpOrientationHandler()
+{
+    var oh = new OrientationHelper(function(changeObj) {
+        changeObjNew = changeObj;
+
+        var offset = 0;
+
+        var firstTimeSinceReset = false;
+
+        if (changeObjRef != null)
+        {
+            // map 360 degree val to -90 - 90
+            offset = changeObjRef.degRotation - changeObj.degRotation;
+
+            // limit range
+            if (offset > 90)
+            {
+                offset = 90;
+            }
+            else if (offset < -90)
+            {
+                offset = -90;
+            }
+        }
+        else
+        {
+            changeObjRef = changeObj;
+
+            firstTimeSinceReset = true;
+        }
+
+        if (wsServo &&
+            !firstTimeSinceReset &&
+            GetRadioButtonVal("ctlType") == "orientation")
+        {
+            PublishToServo(offset, "orientationValSent");
+        }
+
+        document.getElementById("orientationVal").innerHTML =
+            "raw: " + changeObj.degRotation + "<br/>" +
+            "offset: " + offset;
+    });
 }
 
 function OnRangeVal(val)
 {
     if (wsServo && GetRadioButtonVal("ctlType") == "range")
     {
-        wsServo.send(val);
+        PublishToServo(-val, "rangeValSent");
     }
 
-    document.getElementById("rangeVal").innerHTML = val;
+    document.getElementById("rangeVal").innerHTML = -val;
 }
-
 
 function OnLoad()
 {
-    window.addEventListener('deviceorientation', OnOrientation, false);
+    SetUpOrientationHandler();
 }
 
         </script>
@@ -270,11 +342,16 @@ function OnLoad()
                 <th>use</th>
                 <th>input</th>
                 <th>value</th>
+                <th>sent</th>
             </tr>
             <tr>
                 <td><input type='radio' name='ctlType' value='orientation'></input></td>
-                <td></td>
+                <td>
+                orientation
+                <button onclick='ResetOrientationOffset();'>set origin</button>
+                </td>
                 <td><div id='orientationVal'>0</div></td>
+                <td><div id='orientationValSent'>0</div></td>
             </tr>
             <tr>
                 <td><input type='radio' name='ctlType' value='range' checked></input></td>
@@ -284,6 +361,7 @@ function OnLoad()
                            ></input>
                 </td>
                 <td><div id='rangeVal'>0</div></td>
+                <td><div id='rangeValSent'>0</div></td>
             </tr>
         </table>
 

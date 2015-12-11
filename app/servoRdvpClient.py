@@ -33,6 +33,7 @@ class ServoNode(WSNodeMgrEventHandlerIface):
             "ID"           : self.clientId,
             "PASSWORD"     : self.password,
         }))
+        self.sc.MoveTo(0)
 
     def OnWebSocketReadable(self, ws, userData):
         data = ws.Read()
