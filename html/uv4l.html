@@ -15,11 +15,19 @@ button {
 }
         </style>
 
-        <!-- THREE.js libs, needed for helping with orientation -->
+        <!-- THREE.js libs:
+             - three.js - core
+             - DeviceOrientationControls - help mapping device to camera dir
+             - StereoEffect - cardboard stuff
+        -->
         <script src="js/third-party/threejs.r73/three.js"></script>
         <script src="js/third-party/threejs.r73/DeviceOrientationControls.js">
         </script>
+        <script src="js/third-party/threejs.r73/StereoEffect.js">
+        </script>
+
         <script src="js/orientation.js"></script>
+        <script src="js/cardboard.js"></script>
 
         <script src='js/rdvp.js'></script>
         <script src='js/webrtc.js'></script>
@@ -27,33 +35,27 @@ button {
         <script>
 
 
-function PlaceStream(containerId, stream)
+function PlaceStream(stream)
 {
-    domContainer = document.getElementById(containerId);
-
-    domVideo = document.createElement("video");
+    domVideo = document.getElementById("videoRTC");
 
     domVideo.autoplay = true;
     domVideo.controls = true;
     domVideo.muted    = true;
 
-    domVideo.style.width = "100%";
-
     domVideo.src = URL.createObjectURL(stream);
-
-    domContainer.appendChild(domVideo);
 }
 
 
 function OnWebRTCStream(stream)
 {
     console.log("OnWebRTCStream");
-    PlaceStream("remoteStreamContainer", stream);
+    PlaceStream(stream);
 }
 
 function OnWebRTCStreamEnd()
 {
-    document.getElementById("remoteStreamContainer").innerHTML = "";
+    document.getElementById("videoRTC").pause();
 }
 
 function OnClickConnectRTC()
@@ -272,10 +274,39 @@ function OnRangeVal(val)
     document.getElementById("rangeVal").innerHTML = -val;
 }
 
+
+function OnClickGetUserMedia()
+{
+    navigator.getUserMedia = navigator.getUserMedia ||
+                             navigator.webkitGetUserMedia;
+
+    navigator.getUserMedia(
+        {
+            audio: false,
+            video: true
+        },
+        function OnSuccess(mediaStream) {
+            PlaceStream(mediaStream);
+        }, function OnFailure(err) {
+            console.log("Couldn't get local media stream: " + err);
+        }
+    );
+}
+
+
+
 function OnLoad()
 {
+    var domVideo = document.getElementById("videoRTC");
+
+    domVideo.onresize = function() {
+        console.log("size changed: " + domVideo.videoWidth + "x" + domVideo.videoHeight);
+    }
+
     SetUpOrientationHandler();
+    Cardboard(domVideo);
 }
+
 
         </script>
     </head>
@@ -330,9 +361,35 @@ function OnLoad()
             </tr>
         </table>
 
+        <input type='button'
+               value='getUserMedia'
+               onclick='OnClickGetUserMedia()'>
+
         <br/>
 
-        <div id='remoteStreamContainer'></div>
+        <style>
+/*
+
+I've seen the streaming video at resolutions:
+- 640x480 (WebRTC, getUserMedia)
+- 480x360 (WebRTC)
+- 320x240 (WebRTC)
+
+And it changes during playback from WebRTC streams.
+
+}
+
+ */
+
+#videoRTC {
+    width: 320px;
+    height: 240px;
+}
+
+        </style>
+        <div id='remoteStreamContainer'>
+            <video id='videoRTC'></video>
+        </div>
 
         <br/>
 
@@ -364,6 +421,34 @@ function OnLoad()
                 <td><div id='rangeValSent'>0</div></td>
             </tr>
         </table>
+
+        <br/>
+        <br/>
+
+        Cardboard View (latest 3)<br/>
+<style>
+
+#restrainer {
+    width: 480;
+    height: 240;
+}
+
+#cardboardContainer {
+    height: 100%;
+    width: 100%;
+}
+
+</style>
+        <div id='restrainer'>
+            <div id='cardboardContainer'>
+            </div>
+        </div>
+
+
+        <br/>
+        <br/>
+        <br/>
+        <br/>
 
     </body>
 </html>
