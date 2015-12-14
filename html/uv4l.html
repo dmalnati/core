@@ -25,6 +25,10 @@ button {
         </script>
         <script src="js/third-party/threejs.r73/StereoEffect.js">
         </script>
+        <script src="js/third-party/threejs.r73/OculusRiftEffect.js">
+        </script>
+
+        <script src="js/utl.js"></script>
 
         <script src="js/orientation.js"></script>
         <script src="js/cardboard.js"></script>
@@ -72,16 +76,30 @@ function OnClickConnectRTC()
     );
 }
 
-function OnClickConnectServo()
+function OnClickConnectServoX()
 {
-    OnStartServo(
-        document.getElementById("clientIdServo").value,
-        document.getElementById("connectToIdServo").value,
-        document.getElementById("passwordServo").value,
+    OnStartServoX(
+        document.getElementById("clientIdServoX").value,
+        document.getElementById("connectToIdServoX").value,
+        document.getElementById("passwordServoX").value,
         function OnOpen(ws) {
-            document.getElementById("servoStatus").style.backgroundColor = "green";
+            document.getElementById("servoStatusX").style.backgroundColor = "green";
         }, function OnClose() {
-            document.getElementById("servoStatus").style.backgroundColor = "red";
+            document.getElementById("servoStatusX").style.backgroundColor = "red";
+        }
+    );
+}
+
+function OnClickConnectServoY()
+{
+    OnStartServoY(
+        document.getElementById("clientIdServoY").value,
+        document.getElementById("connectToIdServoY").value,
+        document.getElementById("passwordServoY").value,
+        function OnOpen(ws) {
+            document.getElementById("servoStatusY").style.backgroundColor = "green";
+        }, function OnClose() {
+            document.getElementById("servoStatusY").style.backgroundColor = "red";
         }
     );
 }
@@ -102,8 +120,8 @@ function DeactivateServoButtons()
     document.getElementById("buttonBorder").style.borderColor = "red";
 }
 
-var wsServo = null;
-function OnStartServo(clientId, connectToId, password, cbOpen, cbClose)
+var wsServoX = null;
+function OnStartServoX(clientId, connectToId, password, cbOpen, cbClose)
 {
     ws = RDVP_WebSocketThisHost("CC", clientId, password, connectToId);
     ws.onopen = function() {
@@ -114,7 +132,22 @@ function OnStartServo(clientId, connectToId, password, cbOpen, cbClose)
         cbClose();
     }
 
-    wsServo = ws;
+    wsServoX = ws;
+}
+
+var wsServoY = null;
+function OnStartServoY(clientId, connectToId, password, cbOpen, cbClose)
+{
+    ws = RDVP_WebSocketThisHost("CC", clientId, password, connectToId);
+    ws.onopen = function() {
+        cbOpen();
+    }
+
+    ws.onclose = function() {
+        cbClose();
+    }
+
+    wsServoY = ws;
 }
 
 var wsWebRTC = null;
@@ -167,9 +200,14 @@ function OnClickDisconnectRTC()
     OnWebRTCStreamEnd();
 }
 
-function OnClickDisconnectServo()
+function OnClickDisconnectServoX()
 {
-    if (wsServo) { wsServo.close(); }
+    if (wsServoX) { wsServoX.close(); }
+}
+
+function OnClickDisconnectServoY()
+{
+    if (wsServoY) { wsServoY.close(); }
 }
 
 
@@ -188,18 +226,18 @@ function GetRadioButtonVal(name)
 }
 
 
-var pubLast = 0;
-function PublishToServo(val, domId)
+var pubLastX = 0;
+function PublishToServoX(val, domId)
 {
     val = val.toFixed(1);
 
-    if (pubLast)
+    if (pubLastX)
     {
-        if (Math.abs(val - pubLast) >= 0.5)
+        if (Math.abs(val - pubLastX) >= 0.5)
         {
-            wsServo.send(val);
+            wsServoX.send(val);
 
-            pubLast = val;
+            pubLastX = val;
         }
         else
         {
@@ -208,7 +246,31 @@ function PublishToServo(val, domId)
     }
     else
     {
-        pubLast = val;
+        pubLastX = val;
+    }
+}
+
+var pubLastY = 0;
+function PublishToServoY(val, domId)
+{
+    val = val.toFixed(1);
+
+    if (pubLastY)
+    {
+        if (Math.abs(val - pubLastY) >= 0.5)
+        {
+            wsServoY.send(val);
+
+            pubLastY = val;
+        }
+        else
+        {
+            console.log("discarded " + val.toFixed(1) + ", same as before");
+        }
+    }
+    else
+    {
+        pubLastY = val;
     }
 }
 
@@ -251,11 +313,16 @@ function SetUpOrientationHandler()
             firstTimeSinceReset = true;
         }
 
-        if (wsServo &&
+        if (wsServoX &&
             !firstTimeSinceReset &&
             GetRadioButtonVal("ctlType") == "orientation")
         {
-            PublishToServo(offset, "orientationValSent");
+            PublishToServoX(offset, "orientationValSent");
+        }
+
+        if (wsServoY && GetRadioButtonVal("ctlType") == "orientation")
+        {
+            PublishToServoY(-changeObj.degUpDown, "orientationValSent");
         }
 
         document.getElementById("orientationVal").innerHTML =
@@ -266,9 +333,9 @@ function SetUpOrientationHandler()
 
 function OnRangeVal(val)
 {
-    if (wsServo && GetRadioButtonVal("ctlType") == "range")
+    if (wsServoX && GetRadioButtonVal("ctlType") == "range")
     {
-        PublishToServo(-val, "rangeValSent");
+        PublishToServoX(-val, "rangeValSent");
     }
 
     document.getElementById("rangeVal").innerHTML = -val;
@@ -326,7 +393,7 @@ function OnLoad()
             <tr>
                 <td>WebRTC</td>
                 <td>
-        <input id='clientIdWebRTC' value='OP1' size='8'>
+        <input id='clientIdWebRTC' value='CC_RTC' size='8'>
                 </td>
                 <td>
         <input id='connectToIdWebRTC' value='UV4L' size='8'>
@@ -342,21 +409,39 @@ function OnLoad()
                 </td>
             </tr>
             <tr>
-                <td>Servo</td>
+                <td>ServoX</td>
                 <td>
-        <input id='clientIdServo' value='OP2' size='8'>
+        <input id='clientIdServoX' value='CC_X' size='8'>
                 </td>
                 <td>
-        <input id='connectToIdServo' value='SERVO' size='8'>
+        <input id='connectToIdServoX' value='SERVO_X' size='8'>
                 </td>
                 <td>
-        <input id='passwordServo' value='' size='8'>
+        <input id='passwordServoX' value='' size='8'>
                 </td>
                 <td>
-        <input type='button' value='connect' onclick='OnClickConnectServo()'>
-        <input type='button' value='disconnect' onclick='OnClickDisconnectServo()'>
+        <input type='button' value='connect' onclick='OnClickConnectServoX()'>
+        <input type='button' value='disconnect' onclick='OnClickDisconnectServoX()'>
                 </td>
-                <td id='servoStatus' style='background-color: red;'>
+                <td id='servoStatusX' style='background-color: red;'>
+                </td>
+            </tr>
+            <tr>
+                <td>ServoY</td>
+                <td>
+        <input id='clientIdServoY' value='CC_Y' size='8'>
+                </td>
+                <td>
+        <input id='connectToIdServoY' value='SERVO_Y' size='8'>
+                </td>
+                <td>
+        <input id='passwordServoY' value='' size='8'>
+                </td>
+                <td>
+        <input type='button' value='connect' onclick='OnClickConnectServoY()'>
+        <input type='button' value='disconnect' onclick='OnClickDisconnectServoY()'>
+                </td>
+                <td id='servoStatusY' style='background-color: red;'>
                 </td>
             </tr>
         </table>
@@ -443,6 +528,89 @@ And it changes during playback from WebRTC streams.
             <div id='cardboardContainer'>
             </div>
         </div>
+
+        <table>
+            <tr>
+                <td>
+                camera.aspect
+                </td>
+                <td>
+        <input type='range' min='0.5' max='1.5' step='0.1' value='1'
+               oninput='
+                   camera.aspect = this.value;
+                   parentNode.nextElementSibling.innerHTML = this.value;
+               '
+               ></input>
+                </td>
+                <td>
+                1
+                </td>
+            </tr>
+            <tr>
+                <td>
+                canvas.height
+                </td>
+                <td>
+        <input type='range' min='512' max='1024' step='512' value='1024'
+               oninput='
+                   canvas.height= this.value;
+                   parentNode.nextElementSibling.innerHTML = this.value;
+               '
+               ></input>
+                </td>
+                <td>
+                1024
+                </td>
+            </tr>
+            <tr>
+                <td>
+                canvas.width
+                </td>
+                <td>
+        <input type='range' min='512' max='1024' step='512' value='1024'
+               oninput='
+                   canvas.width= this.value;
+                   parentNode.nextElementSibling.innerHTML = this.value;
+               '
+               ></input>
+                </td>
+                <td>
+                1024
+                </td>
+            </tr>
+            <tr>
+                <td>
+                cameraMesh.position.z
+                </td>
+                <td>
+        <input type='range' min='100' max='1200' step='100' value='500'
+               oninput='
+                   cameraMesh.position.z=-this.value;
+                   parentNode.nextElementSibling.innerHTML = this.value;
+               '
+               ></input>
+                </td>
+                <td>
+                500
+                </td>
+            </tr>
+            <tr>
+                <td>
+                cameraMesh.position.y
+                </td>
+                <td>
+        <input type='range' min='10' max='100' step='5' value='75'
+               oninput='
+                   cameraMesh.position.y=this.value;
+                   parentNode.nextElementSibling.innerHTML = this.value;
+               '
+               ></input>
+                </td>
+                <td>
+                75
+                </td>
+            </tr>
+        </table>
 
 
         <br/>
