@@ -1,0 +1,291 @@
+<html>
+    <head>
+        <title>Latency</title>
+
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+        <script src='js/rdvp.js'></script>
+
+
+
+
+<!--
+
+////////////////////////////////
+//
+// Google Time-Series Chart
+//
+////////////////////////////////
+
+-->
+    <script type="text/javascript"
+          src="https://www.google.com/jsapi?autoload={
+            'modules':[{
+              'name':'visualization',
+              'version':'1',
+              'packages':['corechart']
+            }]
+          }">
+    </script>
+
+    <script>
+google.setOnLoadCallback(SetUpTimeSeriesChart);
+
+var tsData  = null;
+var tsChart = null;
+var tsChartOptions = {};
+function SetUpTimeSeriesChart()
+{
+    tsData = new google.visualization.DataTable();
+    tsData.addColumn('datetime', "Time");
+    tsData.addColumn('number', "ms");
+
+    tsChartOptions = {
+        title: "Latency"
+    };
+
+    var domContainer = document.getElementById("timeSeriesContainer");
+
+    tsChart = new google.visualization.LineChart(domContainer);
+    tsChart.draw(tsData, tsChartOptions);
+}
+
+function AddSampleTimeSeries(ts, msLat)
+{
+    tsData.addRows([
+        [
+            new Date(ts),
+            msLat
+        ]
+    ]);
+    tsChart.draw(tsData, tsChartOptions);
+}
+
+function OnClickClearTimeSeries()
+{
+    tsData.removeRows(0, tsData.getNumberOfRows());
+    tsChart.draw(tsData, tsChartOptions);
+}
+    </script>
+
+
+
+        <style>
+table, tr, th, td {
+    border-collapse: collapse;
+}
+        </style>
+
+
+
+        <script>
+
+var ws = null;
+function OnClickConnect()
+{
+    var clientId    = document.getElementById("clientId").value;
+    var connectToId = document.getElementById("connectToId").value;
+    var password    = document.getElementById("password").value;
+
+    ws = RDVP_WebSocketThisHost("CC", clientId, password, connectToId);
+
+    ws.onopen = function() {
+        document.getElementById("status").style.backgroundColor = "green";
+    }
+
+    ws.onclose = function() {
+        document.getElementById("status").style.backgroundColor = "red";
+    }
+
+    ws.onmessage = function(evt) {
+        OnData(evt.data);
+    }
+}
+
+function OnClickDisconnect()
+{
+    ws.close();
+}
+
+
+var latSendAgain = true;
+var msTimeout = null;
+function OnSampleIntervalChange()
+{
+    msTimeout = document.getElementById("msSampleInterval").value;
+
+    console.log("simple interval now: " + msTimeout);
+}
+
+function OnClickStart()
+{
+    latSendAgain = true;
+
+    OnSampleIntervalChange();
+    OnTimeout();
+}
+
+function OnTimeout()
+{
+    if (latSendAgain)
+    {
+        var tsNow = new Date().getTime();
+
+        ws.send(JSON.stringify({
+            "MESSAGE_TYPE" : "REQ_PING_PONG",
+            "TIMESTAMP"    : tsNow
+        }));
+
+        setTimeout(OnTimeout, msTimeout);
+
+        console.log("Sending at tsNow: " + tsNow);
+    }
+}
+
+function OnClickStop()
+{
+    latSendAgain = false;
+}
+
+
+function OnData(msg)
+{
+    var tsNow = new Date().getTime();
+
+    var jsonObj = JSON.parse(msg);
+
+    var tsThen = jsonObj.DATA.TIMESTAMP;
+
+    var msDiff = tsNow - tsThen;
+
+    OnLatencyCalc(tsThen, tsNow, msDiff);
+}
+
+function OnLatencyCalc(tsThen, tsNow, msDiff)
+{
+    console.log("Received from   : " + tsThen);
+    console.log("It is now       : " + tsNow);
+    console.log("msDiff          : " + msDiff);
+
+    AddSampleTimeSeries(tsThen, msDiff);
+}
+
+
+var evmIntervalHandle = null;
+var msEvmInterval = null;
+function OnClickStartEvmInterval()
+{
+    OnEvmIntervalChange();
+    OnClickStopEvmInterval();
+
+    msEvmInterval = document.getElementById("msEvmInterval").value;
+
+    function OnTimeout()
+    {
+        evmIntervalHandle = setTimeout(OnTimeout, msEvmInterval);
+    }
+
+    OnTimeout();
+}
+
+function OnClickStopEvmInterval()
+{
+    if (evmIntervalHandle)
+    {
+        clearInterval(evmIntervalHandle);
+    }
+
+    evmIntervalHandle = null;
+}
+
+function OnEvmIntervalChange()
+{
+    msEvmInterval = document.getElementById("msEvmInterval").value;
+    console.log("evm interval now: " + msEvmInterval);
+}
+
+
+function OnLoad()
+{
+}
+        </script>
+
+
+    <script>
+
+
+    </script>
+
+
+    </head>
+
+    <body onload='OnLoad();'>
+        <table border=1>
+            <tr>
+                <th>Ctl</th>
+                <th>ID</th>
+                <th>Service</th>
+                <th>PW</th>
+                <th>Action</th>
+                <th>Status</th>
+            </tr>
+            <tr>
+                <td>Latency</td>
+                <td>
+        <input id='clientId' value='CC_LAT' size='8'>
+                </td>
+                <td>
+        <input id='connectToId' value='LATENCY' size='8'>
+                </td>
+                <td>
+        <input id='password' value='' size='8'>
+                </td>
+                <td>
+        <input type='button' value='connect' onclick='OnClickConnect()'>
+        <input type='button' value='disconnect' onclick='OnClickDisconnect()'>
+                </td>
+                <td id='status' style='background-color: red;'>
+                </td>
+            </tr>
+        </table>
+
+        <button onclick='OnClickStart()'>Start</button>
+        <button onclick='OnClickStop()'>Stop</button>
+        <input type='number' id='msSampleInterval' min='1' value='1000' onchange='OnSampleIntervalChange()'> msSampleInterval
+
+        <br/>
+
+        <button onclick='OnClickStartEvmInterval()'>Start</button>
+        <button onclick='OnClickStopEvmInterval()'>Stop</button>
+        <input type='number' id='msEvmInterval' min='1' value='1000' onchange='OnEvmIntervalChange()'> msEvmInterval
+
+        <br/>
+        <br/>
+        <br/>
+
+        <button onclick='OnClickClearTimeSeries()'>Clear</button>
+        <div id='timeSeriesContainer'></div>
+
+        <br/>
+
+        <div id='histogramContainer'></div>
+
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+
+
+
+    </body>
+</html>
+
+
+
+
+
+
+
+
+
