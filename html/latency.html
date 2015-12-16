@@ -5,80 +5,69 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
         <script src='js/rdvp.js'></script>
-
-
-
-
-<!--
-
-////////////////////////////////
-//
-// Google Time-Series Chart
-//
-////////////////////////////////
-
--->
-    <script type="text/javascript"
-          src="https://www.google.com/jsapi?autoload={
-            'modules':[{
-              'name':'visualization',
-              'version':'1',
-              'packages':['corechart']
-            }]
-          }">
-    </script>
-
-    <script>
-google.setOnLoadCallback(SetUpTimeSeriesChart);
-
-var tsData  = null;
-var tsChart = null;
-var tsChartOptions = {};
-function SetUpTimeSeriesChart()
-{
-    tsData = new google.visualization.DataTable();
-    tsData.addColumn('datetime', "Time");
-    tsData.addColumn('number', "ms");
-
-    tsChartOptions = {
-        title: "Latency"
-    };
-
-    var domContainer = document.getElementById("timeSeriesContainer");
-
-    tsChart = new google.visualization.LineChart(domContainer);
-    tsChart.draw(tsData, tsChartOptions);
-}
-
-function AddSampleTimeSeries(ts, msLat)
-{
-    tsData.addRows([
-        [
-            new Date(ts),
-            msLat
-        ]
-    ]);
-    tsChart.draw(tsData, tsChartOptions);
-}
-
-function OnClickClearTimeSeries()
-{
-    tsData.removeRows(0, tsData.getNumberOfRows());
-    tsChart.draw(tsData, tsChartOptions);
-}
-    </script>
-
-
+        <script src='js/graph.js'></script>
 
         <style>
 table, tr, th, td {
     border-collapse: collapse;
+}
+
+#timeSeriesContainer, #histogramContainer {
+    width: 80%;
+    height: 300px;
+    border: 1px solid red;
 }
         </style>
 
 
 
         <script>
+
+/////////////////////////////////////////////////////
+//
+// EVM Logic
+//
+/////////////////////////////////////////////////////
+
+var evmIntervalHandle = null;
+var msEvmInterval = null;
+function OnClickStartEvmInterval()
+{
+    OnEvmIntervalChange();
+    OnClickStopEvmInterval();
+
+    msEvmInterval = document.getElementById("msEvmInterval").value;
+
+    function OnTimeout()
+    {
+        evmIntervalHandle = setTimeout(OnTimeout, msEvmInterval);
+    }
+
+    OnTimeout();
+}
+
+function OnClickStopEvmInterval()
+{
+    if (evmIntervalHandle)
+    {
+        clearInterval(evmIntervalHandle);
+    }
+
+    evmIntervalHandle = null;
+}
+
+function OnEvmIntervalChange()
+{
+    msEvmInterval = document.getElementById("msEvmInterval").value;
+    console.log("evm interval now: " + msEvmInterval);
+}
+
+
+/////////////////////////////////////////////////////
+//
+// Connection logic
+//
+/////////////////////////////////////////////////////
 
 var ws = null;
 function OnClickConnect()
@@ -107,6 +96,12 @@ function OnClickDisconnect()
     ws.close();
 }
 
+
+/////////////////////////////////////////////////////
+//
+// Ping Pong Logic
+//
+/////////////////////////////////////////////////////
 
 var latSendAgain = true;
 var msTimeout = null;
@@ -148,6 +143,12 @@ function OnClickStop()
 }
 
 
+/////////////////////////////////////////////////////
+//
+// Sample Processing Logic
+//
+/////////////////////////////////////////////////////
+
 function OnData(msg)
 {
     var tsNow = new Date().getTime();
@@ -167,55 +168,63 @@ function OnLatencyCalc(tsThen, tsNow, msDiff)
     console.log("It is now       : " + tsNow);
     console.log("msDiff          : " + msDiff);
 
-    AddSampleTimeSeries(tsThen, msDiff);
+    AddSample(tsThen, msDiff);
 }
 
 
-var evmIntervalHandle = null;
-var msEvmInterval = null;
-function OnClickStartEvmInterval()
+/////////////////////////////////////////////////////
+//
+// Graph Handling Logic
+//
+/////////////////////////////////////////////////////
+
+function OnClickClearTimeSeries()
 {
-    OnEvmIntervalChange();
-    OnClickStopEvmInterval();
-
-    msEvmInterval = document.getElementById("msEvmInterval").value;
-
-    function OnTimeout()
-    {
-        evmIntervalHandle = setTimeout(OnTimeout, msEvmInterval);
-    }
-
-    OnTimeout();
+    chartTs.Clear();
 }
 
-function OnClickStopEvmInterval()
+function AddSample(tsThen, msDiff)
 {
-    if (evmIntervalHandle)
-    {
-        clearInterval(evmIntervalHandle);
-    }
+    chartTs.AddSample(tsThen, msDiff);
 
-    evmIntervalHandle = null;
+    chartHist.AddSample(msDiff);
 }
 
-function OnEvmIntervalChange()
+var chartTs;
+var chartHist;
+function LoadGraphs()
 {
-    msEvmInterval = document.getElementById("msEvmInterval").value;
-    console.log("evm interval now: " + msEvmInterval);
+    chartTs = new ChartTimeSeries(function() {
+        chartTs.SetUp(
+            document.getElementById("timeSeriesContainer"),
+            "Latency",
+            "ms"
+        );
+    });
+
+    chartHist = new ChartHistogram(function() {
+        chartHist.SetUp(
+            document.getElementById("histogramContainer"),
+            "Latency",
+            "ms",
+            10
+        );
+    });
 }
 
+
+/////////////////////////////////////////////////////
+//
+// OnLoad
+//
+/////////////////////////////////////////////////////
 
 function OnLoad()
 {
+    LoadGraphs();
 }
+
         </script>
-
-
-    <script>
-
-
-    </script>
-
 
     </head>
 

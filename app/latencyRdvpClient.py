@@ -5,12 +5,10 @@ import os
 
 import json
 
-import pigpio
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', ''))
 from myLib.utl import *
 from myLib.ws import *
-from myLib.motor import *
 
 
 class LatencyNode(WSNodeMgrEventHandlerIface):
