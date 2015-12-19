@@ -3,6 +3,7 @@ import time
 
 import pigpio
 
+from ..utl import *
 
 class ServoControl():
     def __init__(self,
@@ -10,7 +11,8 @@ class ServoControl():
                  bcPin,
                  msPulseLow=500,
                  msPulseHigh=2500,
-                 degRange=180):
+                 degRange=180,
+                 pwmDurationBeforeOff=1500):
         self.pigd        = pigd
         self.bcPin       = int(bcPin)
         self.msPulseLow  = float(msPulseLow)
@@ -18,6 +20,13 @@ class ServoControl():
         self.degRange    = float(degRange)
 
         self.degLast = None
+
+        self.pwmDurationBeforeOff = pwmDurationBeforeOff
+        self.timerHandle = None
+
+
+    def __del__(self):
+        self.Stop()
 
 
     # deg from -(.5 * degRange) to (.5 * degRange)
@@ -43,11 +52,34 @@ class ServoControl():
             self.msPulseLow + \
             ((self.msPulseHigh - self.msPulseLow) * degAsPctOfPositiveRange)
 
-        # apply indefinitely
+        # apply
         self.pigd.set_servo_pulsewidth(self.bcPin, msPulse)
 
+        # Start timer to end pwm once enough time has gone by that the
+        # servo should be in place.
+        self.StartTimer()
+
+    def TurnOffPWM(self):
+        self.pigd.set_servo_pulsewidth(self.bcPin, 0)
+
+    def StartTimer(self):
+        self.CancelTimer()
+        self.timerHandle = evm_SetTimeout(self.OnTimeout,
+                                          self.pwmDurationBeforeOff)
+
+    def CancelTimer(self):
+        if self.timerHandle != None:
+            evm_CancelTimeout(self.timerHandle)
+            self.timerHandle = None
+
+    def OnTimeout(self):
+        self.timerHandle = None
+        self.TurnOffPWM()
 
     def Stop(self):
+        self.CancelTimer()
+        self.TurnOffPWM()
         self.pigd.stop()
+
 
 

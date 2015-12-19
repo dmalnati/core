@@ -36,7 +36,7 @@ def Bridge(ws):
         else:
             ws.Write(line.rstrip("\n"))
 
-    WatchStdin(OnStdin)
+    WatchStdinRaw(OnStdin)
 
 
 def Main():

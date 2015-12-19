@@ -11,8 +11,6 @@ def Main():
 
     pigd = pigpio.pi()
 
-
-
     for pct in range(0, 100):
         #pct = random.randint(0, 100)
         msPulse = int(500 + ((float(pct) / 100.0) * 2000))
@@ -20,6 +18,7 @@ def Main():
         pigd.set_servo_pulsewidth(bcPin, msPulse)
         time.sleep(0.1)
 
+    pigd.set_servo_pulsewidth(bcPin, 0);
     pigd.stop()
 
 Main()

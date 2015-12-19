@@ -53,12 +53,35 @@ def HandleSignals():
     # handle ctl-c
     signal.signal(signal.SIGINT, SignalHandler)
 
-def WatchStdin(cbFn):
+def WatchStdinRaw(cbFn):
     def Handler(fd, events):
         cbFn()
 
     loop = tornado.ioloop.IOLoop.instance()
     loop.add_handler(sys.stdin, Handler, tornado.ioloop.IOLoop.READ)
+
+def WatchStdin(cbFn):
+    def Handler():
+        line   = sys.stdin.readline()
+        closed = False
+
+        if not line:
+            closed = True
+        else:
+            line = line.rstrip("\n")
+
+        cbFn(closed, line)
+
+    WatchStdinRaw(Handler)
+
+def WatchStdinEndLoopOnEOF(cbFn):
+    def Handler(closed, line):
+        if not closed:
+            cbFn(line)
+        else:
+            evm_MainLoopFinish()
+
+    WatchStdin(Handler)
 
 
 #######################################################################
