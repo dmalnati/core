@@ -25,10 +25,6 @@ class ServoControl():
         self.timerHandle = None
 
 
-    def __del__(self):
-        self.Stop()
-
-
     # deg from -(.5 * degRange) to (.5 * degRange)
     # when negative, turn servo left.  The lower the number, the more left.
     # when positive, turn servo right. The higher the number, the more right.
