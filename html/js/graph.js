@@ -43,12 +43,20 @@ function ChartTimeSeries(cbReady)
 var data_         = null;
 var chart_        = null;
 var chartOptions_ = {};
+var domContainer_ = null;
 
 
 // Public
 
+t.GetDomContainer = function()
+{
+	return domContainer_;
+}
+
 t.SetUp = function(domContainer, title, seriesName)
 {
+	domContainer_ = domContainer;
+	
     data_ = new google.visualization.DataTable();
     data_.addColumn('datetime', "Time");
     data_.addColumn('number', seriesName);
@@ -119,12 +127,20 @@ function ChartHistogram(cbReady)
 var data_         = null;
 var chart_        = null;
 var chartOptions_ = {};
+var domContainer_ = null;
 
 
 // Public
 
+t.GetDomContainer = function()
+{
+	return domContainer_;
+}
+
 t.SetUp = function(domContainer, title, seriesName, bucketSize)
 {
+	domContainer_ = domContainer;
+	
     data_ = new google.visualization.DataTable();
     data_.addColumn('number', seriesName);
 
