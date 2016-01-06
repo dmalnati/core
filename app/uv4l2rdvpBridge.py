@@ -147,7 +147,8 @@ class Handler(WSBridgeLoggerIface, WSBridge):
 
         # start it up again
         Log("Starting UV4L")
-        subprocess.call("sudo /usr/bin/uv4l -f --auto-video_nr yes -k --sched-rr --mem-lock  --driver uvc --device-id 046d:0990 --server-option '--port=9000' &",shell=True)
+        #subprocess.call("sudo /usr/bin/uv4l -f --auto-video_nr yes -k --sched-rr --mem-lock  --driver uvc --device-id 046d:0990 --server-option '--port=9000' &",shell=True)
+        subprocess.call("uv4l --foreground --auto-video_nr yes --driver uvc --device-id 046d:0990  --server-option='--port=9000' --server-option='--webrtc-cpu-overuse-detection=no' --server-option='--enable-webrtc-audio=no' --server-option='--webrtc-receive-audio=no' &",shell=True)
 
         time.sleep(5)
 
