@@ -112,3 +112,68 @@ function MapOntoPreservingRatio(box1, box2)
 
     return retVal;
 }
+
+
+//
+// basically deg1 - deg2
+// in the range of 180 degrees left or right
+//
+function DegDiffLeftRight(deg1, deg2)
+{
+    var retVal = 0;
+ 
+    var otherSideOfCircle = (deg1 + 180) % 360;
+ 
+    // figure out where the seam is in relation to deg1
+    if (deg1 >= 180)
+    {
+        // seam is on right hand side
+        var degDiff = deg1 - deg2;
+ 
+        if (degDiff >= 0)
+        {
+            if (deg2 >= otherSideOfCircle)
+            {
+                // deg2 is to the left that many degrees
+                retVal = -degDiff;
+            }
+            else
+            {
+                // deg2 is to the right
+                retVal = (360 - deg1) + deg2;
+            }
+        }
+        else // (degDiff < 0)
+        {
+            // deg2 is that many degrees to the right
+            retVal = -degDiff;
+        }
+    }
+    else // (deg1 < 180)
+    {
+        // seam is on left hand side
+        var degDiff = deg1 - deg2;
+ 
+        if (degDiff >= 0)
+        {
+            // deg2 is to the left that many degrees
+ 
+            retVal = -degDiff;
+        }
+        else // (degDiff < 0)
+        {
+            if (deg2 >= otherSideOfCircle)
+            {
+                // deg2 is to the left, but on other side of seam
+                retVal = -((360 - deg2) + deg1);
+            }
+            else
+            {
+                // deg2 is to the right
+                retVal = -degDiff;
+            }
+        }
+    }
+ 
+    return retVal;
+}

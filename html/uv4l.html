@@ -294,7 +294,9 @@ function SetUpOrientationHandler()
         if (changeObjRef != null)
         {
             // map 360 degree val to -90 - 90
-            offset = changeObjRef.degRotation - changeObj.degRotation;
+//            offset = changeObjRef.degRotation - changeObj.degRotation;
+            offset = DegDiffLeftRight(changeObjRef.degRotation,
+                                      changeObj.degRotation);
 
             // limit range
             if (offset > 90)
