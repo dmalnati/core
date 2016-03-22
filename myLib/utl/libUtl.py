@@ -2,6 +2,7 @@ import signal
 import sys
 import time
 import datetime
+import binascii
 
 import json
 
@@ -103,6 +104,40 @@ def GetPrettyJSON(jsonObj):
                       indent=4,
                       separators=(',', ': '))
 
+
+
+
+# slightly re-arranged from code found here:
+# http://www.evilgeniuslair.com/2015/01/14/crc-8/
+class CRC8:
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def Calculate(buf):
+        return CRC8.calcCheckSum(buf)
+
+    @staticmethod
+    def calcCheckSum(incoming):
+        #msgByte = hexStr2Byte(incoming)
+        msgByte = bytearray(incoming)
+        check = 0
+        for i in msgByte:
+            check = CRC8.AddToCRC(i, check)
+        return check
+
+    @staticmethod
+    def AddToCRC(b, crc):
+        b2 = b
+        if (b < 0):
+            b2 = b + 256
+        for i in xrange(8):
+            odd = ((b2^crc) & 1) == 1
+            crc >>= 1
+            b2 >>= 1
+            if (odd):
+                crc ^= 0x8C # this means crc ^= 140
+        return crc
 
 
 
