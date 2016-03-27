@@ -16,8 +16,9 @@ class TestSerialLink():
         self.SEND_INTERVAL_MS = 2000
 
         # Get a SerialLink
-        self.serialLink = SerialLink()
-        self.serialLink.Init(bcPinRx, bcPinTx, self.OnRx)
+        self.serialLink = SerialLink(bcPinRx, bcPinTx)
+
+        self.serialLink.SetCbOnRxAvailable(self.OnRx)
 
         # Set up timer to periodically send data
         evm_SetTimeout(self.OnTimeoutTx, self.SEND_INTERVAL_MS)

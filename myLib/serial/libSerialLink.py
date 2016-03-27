@@ -47,13 +47,13 @@ class SerialLinkHeader():
 
 
 class SerialLink():
-    def __init__(self):
+    def __init__(self, bcPinRx, bcPinTx):
         self.BAUD              = 9600
         self.PREAMBLE_BYTE     = 0x55
         self.RX_POLL_PERIOD_MS = 100
 
-        self.bcPinRx = None
-        self.bcPinTx = None
+        self.bcPinRx = bcPinRx
+        self.bcPinTx = bcPinTx
 
         self.cbOnRxAvailable = None
 
@@ -62,14 +62,11 @@ class SerialLink():
 
         self.pigd = pigpio.pi()
 
-    def Init(self, bcPinRx, bcPinTx, cbOnRxAvailable):
-        self.bcPinRx = bcPinRx
-        self.bcPinTx = bcPinTx
-
-        self.cbOnRxAvailable = cbOnRxAvailable
-
         self.InitRx()
         self.InitTx()
+
+    def SetCbOnRxAvailable(self, cbOnRxAvailable):
+        self.cbOnRxAvailable = cbOnRxAvailable
 
     def InitRx(self):
         # open pin for reading serial
