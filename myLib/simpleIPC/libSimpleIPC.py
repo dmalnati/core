@@ -9,6 +9,7 @@ from collections import deque
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', ''))
 from myLib.utl import *
+from myLib.rfLink import *
 
 
 class SimpleIPCMessage():
@@ -36,15 +37,27 @@ class SimpleIPCMessage():
 class SimpleIPCProtocolHandler():
     PROTOCOL_ID = 1
 
-    def __init__(self, link):
-        self.link = link
-
-        self.link.SetCbOnRxAvailable(self.OnRx)
-
+    def __init__(self):
         # Keep a list of message handlers
         self.msgHandlerList = deque()
 
-    def Send(self, msg):
+    def RegisterSerialLink(self, serialLink):
+        self.link = serialLink
+        self.linkType = "SERIAL"
+
+        self.link.SetCbOnRxAvailable(self.OnRx)
+
+    def RegisterRFLink(self, rfLink):
+        self.link = rfLink
+        self.linkType = "RF"
+
+        self.link.SetCbOnRxAvailable(self.OnRx)
+
+    def RegisterRFLinkDefaultAddressing(self, realm, srcAddr):
+        self.realm   = realm
+        self.srcAddr = srcAddr
+
+    def Send(self, dstAddr, msg):
         byteList = bytearray()
 
         byteList.extend([0] * 2)
@@ -52,7 +65,18 @@ class SimpleIPCProtocolHandler():
 
         byteList.extend(msg.GetByteList())
 
-        self.link.Send(self.PROTOCOL_ID, byteList)
+        if self.linkType == "SERIAL":
+            # SerialLink doesn't need addressing -- ignore
+            self.link.Send(self.PROTOCOL_ID, byteList)
+        elif self.linkType == "RF":
+            # RFLink requires addressing, so fill out header
+            hdr = RFLinkHeader()
+            hdr.SetRealm(self.realm)
+            hdr.SetSrcAddr(self.srcAddr)
+            hdr.SetDstAddr(dstAddr)
+            hdr.SetProtocolId(self.PROTOCOL_ID)
+
+            self.link.Send(hdr, byteList)
 
     def RegisterProtocolMessageHandler(self, handler):
         self.msgHandlerList.append(handler)
@@ -62,12 +86,22 @@ class SimpleIPCProtocolHandler():
             msg = SimpleIPCMessage(byteList[2:])
             msg.SetMessageType(*unpack("!H", buffer(byteList, 0, 2)))
 
-            self.OnSimpleIPCMsg(msg)
+            if self.linkType == "SERIAL":
+                # Fake an RFLink header
+                hdr = RFLinkHeader()
+                hdr.SetRealm(0)
+                hdr.SetSrcAddr(0)
+                hdr.SetDstAddr(0)
+                hdr.SetProtocolId(self.PROTOCOL_ID)
 
-    def OnSimpleIPCMsg(self, msg):
+                self.OnSimpleIPCMsg(hdr, msg)
+            elif self.linkType == "RF":
+                self.OnSimpleIPCMsg(hdr, msg)
+
+    def OnSimpleIPCMsg(self, srcAddr, msg):
         # offer to each handler until first one takes it
         for msgHandler in self.msgHandlerList:
-            if msgHandler.HandleMessage(msg):
+            if msgHandler.HandleMessage(srcAddr, msg):
                 break
 
 
