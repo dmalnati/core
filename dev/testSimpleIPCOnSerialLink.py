@@ -19,7 +19,10 @@ class SimpleIPCMessageHandlerTest():
 
         WatchStdinEndLoopOnEOF(self.OnStdin)
 
-    def HandleMessage(self, msg):
+    def SetDstAddr(self, dstAddr):
+        self.dstAddr = dstAddr
+
+    def HandleMessage(self, hdr, msg):
         # we'll accept anything, just testing
         Log("Type %3i" % msg.GetMessageType())
         byteList = msg.GetByteList()
@@ -52,7 +55,7 @@ class SimpleIPCMessageHandlerTest():
             msg.SetPin(pinNumber)
             msg.SetValue(pinValue)
 
-            self.ph.Send(msg)
+            self.ph.Send(self.dstAddr, msg)
 
         elif wordListLen == 2 and wordList[0] == "get":
             pinNumber = int(wordList[1])
@@ -62,7 +65,7 @@ class SimpleIPCMessageHandlerTest():
             msg = MessageGetPinState()
             msg.SetPin(pinNumber)
 
-            self.ph.Send(msg)
+            self.ph.Send(self.dstAddr, msg)
 
         else:
             Log("Command not understood: " + line)
@@ -79,14 +82,15 @@ def Main():
     bcPinTx = int(sys.argv[2])
 
     # Create SerialLink
-    serialLink = SerialLink()
-    serialLink.Init(bcPinRx, bcPinTx)
+    serialLink = SerialLink(bcPinRx, bcPinTx)
 
     # Create ProtocolHandler
-    ph = SimpleIPCProtocolHandler(serialLink)
+    ph = SimpleIPCProtocolHandler()
+    ph.RegisterSerialLink(serialLink)
 
     # Create MessageHandler and associate ProtocolHandler
     msgHandler = SimpleIPCMessageHandlerTest(ph)
+    msgHandler.SetDstAddr(0)
 
     # Register MessageHandler with ProtocolHandler
     ph.RegisterProtocolMessageHandler(msgHandler)
