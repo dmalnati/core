@@ -17,6 +17,9 @@ class MessageGetPinState(SimpleIPCMessage):
     def __init__(self, byteList = None):
         SimpleIPCMessage.__init__(self, byteList)
 
+    def GetPin(self):
+        return unpack("B", buffer(self.byteList, 0, 1))[0]
+
     def SetPin(self, pin):
         self.byteList[0] = pack("B", int(pin))
 
@@ -28,8 +31,14 @@ class MessageSetPinState(SimpleIPCMessage):
     def __init__(self, byteList = None):
         SimpleIPCMessage.__init__(self, byteList)
 
+    def GetPin(self):
+        return unpack("B", buffer(self.byteList, 0, 1))[0]
+
     def SetPin(self, pin):
         self.byteList[0] = pack("B", int(pin))
+
+    def GetValue(self):
+        return unpack("B", buffer(self.byteList, 1, 1))[0]
 
     def SetValue(self, value):
         self.byteList[1] = pack("B", int(value))
@@ -43,10 +52,9 @@ class MessagePinState(SimpleIPCMessage):
         SimpleIPCMessage.__init__(self, byteList)
 
     def GetPin(self):
-        return unpack("B", buffer(self.byteList, 0, 1))
+        return unpack("B", buffer(self.byteList, 0, 1))[0]
 
     def GetValue(self):
-        return unpack("B", buffer(self.byteList, 1, 1))
-
+        return unpack("B", buffer(self.byteList, 1, 1))[0]
 
 

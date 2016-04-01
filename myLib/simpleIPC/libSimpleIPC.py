@@ -3,6 +3,8 @@
 import sys
 import os
 import time
+import re
+import inspect
 
 from struct import *
 from collections import deque
@@ -12,7 +14,7 @@ from myLib.utl import *
 from myLib.rfLink import *
 
 
-class SimpleIPCMessage():
+class SimpleIPCMessage(object):
     def __init__(self, byteList):
         self.byteList = byteList
 
@@ -23,14 +25,63 @@ class SimpleIPCMessage():
         if hasattr(self, "MESSAGE_TYPE"):
             self.messageType = self.MESSAGE_TYPE
 
+    @classmethod
+    def GetClassModulePretty(cls):
+        return str(cls.__module__).split(".")[-1][24:]
+
+    @classmethod
+    def GetClassName(cls):
+        return cls.__name__
+
     def SetMessageType(self, messageType):
         self.messageType = messageType
 
     def GetMessageType(self):
         return self.messageType
 
+    def GetMessageSize(self):
+        return self.MESSAGE_SIZE
+
     def GetByteList(self):
         return self.byteList
+
+    def Print(self):
+        # find list of Getters
+        getterList = []
+
+        # get attrs in order the hard way
+        for line in inspect.getsource(self.__class__).split("\n"):
+            m = re.match(r"^ *def (Get.+)\(.*", line)
+
+            if m:
+                attr = m.group(1)
+
+                if attr != "GetByteList" and \
+                   attr != "GetMessageSize" and \
+                   attr != "GetMessageType" and \
+                   attr != "GetClassName" and \
+                   attr != "GetClassModulePretty":
+                    getterList.append(attr[3:])
+
+        # determine max length for formatting purposes
+        maxLen = 0
+        for getter in getterList:
+            if len(getter) > maxLen:
+                maxLen = len(getter)
+
+        # create format string
+        formatStr = "    %-" + str(maxLen) + "s: %s"
+
+        # Actually print
+        print(self.GetClassName())
+        if len(getterList):
+            for getter in getterList:
+                fn = getattr(self, "Get" + getter)
+                val = str(fn())
+
+                print(formatStr % (getter, val))
+        else:
+            print("    [no fields]")
 
 
 
@@ -40,6 +91,85 @@ class SimpleIPCProtocolHandler():
     def __init__(self):
         # Keep a list of message handlers
         self.msgHandlerList = deque()
+
+    def PrintState(self):
+        self.PrintMessageTypes()
+        self.PrintMessageHandlerSupport()
+
+    def HandlerCanHandleMsg(self, msgHandler, msg):
+        return ("OnHandle%s" % msg.GetClassName()) in dir(msgHandler)
+
+    def HandlerCanHandleUnknownMsg(self, msgHandler):
+        return "OnHandleUnknownMessage" in dir(msgHandler)
+
+    def GetSimpleIPCMessageClassList(self):
+        return SimpleIPCMessage.__subclasses__()
+
+    def PrintMessageHandlerSupport(self):
+        print("%i Installed Message Handlers:" % len(self.msgHandlerList))
+        i = 1
+        for msgHandler in self.msgHandlerList:
+            print("    %i - %s" % (i, msgHandler.__class__.__name__))
+            ++i
+
+        print("")
+
+        # print support for each message type by each handler
+        print("Handler Support by Module and MessageType:")
+        modulePrettyLast = None
+        for sc in self.GetSimpleIPCMessageClassList():
+            # build handler support string
+            supportedStr = ""
+            i = 1
+            for msgHandler in self.msgHandlerList:
+                if self.HandlerCanHandleMsg(msgHandler, sc):
+                    supportedStr += str(i)
+                else:
+                    supportedStr += " "
+                ++i
+
+            # print support by message
+            modulePretty = sc.GetClassModulePretty()
+            if modulePretty != modulePrettyLast:
+                print("%s:" % modulePretty)
+                modulePrettyLast = modulePretty
+
+            print("    %s : %s" % (supportedStr, sc.GetClassName()))
+
+        # print support for the unknown message type handler
+        print("[DefaultMessageHandler]:")
+        supportedStr = ""
+        i = 1
+        for msgHandler in self.msgHandlerList:
+            if self.HandlerCanHandleUnknownMsg(msgHandler):
+                supportedStr += str(i)
+            else:
+                supportedStr += " "
+            ++i
+
+        # print support by message
+        print("    %s : %s" % (supportedStr, "[DefaultMessageHandler]"))
+
+        print("")
+
+    def PrintMessageTypes(self):
+        print("MessageType by Module:")
+        scList = self.GetSimpleIPCMessageClassList()
+
+        parentModuleStrPrettyLast = None
+        for sc in scList:
+            # get pretty version of class module
+            parentModuleStrPretty = sc.GetClassModulePretty()
+
+            # print out module if haven't yet for this group of classes
+            if parentModuleStrPretty != parentModuleStrPrettyLast:
+                print("%s" % parentModuleStrPretty)
+                parentModuleStrPrettyLast = parentModuleStrPretty
+
+            # print out class
+            print("    [%3i] %s" % (sc.MESSAGE_TYPE, sc.GetClassName()))
+
+        print("")
 
     def RegisterSerialLink(self, serialLink):
         self.link = serialLink
@@ -98,11 +228,27 @@ class SimpleIPCProtocolHandler():
             elif self.linkType == "RF":
                 self.OnSimpleIPCMsg(hdr, msg)
 
-    def OnSimpleIPCMsg(self, srcAddr, msg):
-        # offer to each handler until first one takes it
-        for msgHandler in self.msgHandlerList:
-            if msgHandler.HandleMessage(srcAddr, msg):
+    def OnSimpleIPCMsg(self, hdr, msg):
+        # identify message
+        for msgClass in self.GetSimpleIPCMessageClassList():
+            if msgClass.MESSAGE_TYPE == msg.GetMessageType():
+                # message type identified.
+                # construct actual class to contain message.
+                msgParsed = msgClass(msg.GetByteList())
+
+                # offer to each handler which can handle it
+                for msgHandler in self.msgHandlerList:
+                    if self.HandlerCanHandleMsg(msgHandler, msgClass):
+                        # get a handle to the function
+                        fn = \
+                            getattr(msgHandler, \
+                                    ("OnHandle%s" % msgClass.GetClassName()))
+
+                        # call it
+                        fn(hdr, msgParsed)
+
                 break
+
 
 
 

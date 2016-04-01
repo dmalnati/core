@@ -48,6 +48,12 @@ class RFLinkHeader():
     def GetProtocolId(self):
         return self.byteList[3]
 
+    def Print(self):
+        print("Header:")
+        print("    Realm     : %3i" % self.GetRealm())
+        print("    SrcAddr   : %3i" % self.GetSrcAddr())
+        print("    DstAddr   : %3i" % self.GetDstAddr())
+        print("    ProtocolId: %3i" % self.GetProtocolId())
 
 
 class RFLinkOverSerial():

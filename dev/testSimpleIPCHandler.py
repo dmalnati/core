@@ -42,6 +42,13 @@ class SimpleIPCMessageHandlerTest():
 
         return True
 
+    def OnHandleMessagePinState(self, hdr, msg):
+        pass
+
+    def OnHandleMessageRepGetTemperature(self, hdr, msg):
+        hdr.Print()
+        msg.Print()
+
     def OnStdin(self, line):
         # look for:
         # set <pinNumber> <1=on,0=off>
