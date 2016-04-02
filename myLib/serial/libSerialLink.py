@@ -45,6 +45,13 @@ class SerialLinkHeader():
     def GetProtocolId(self):
         return self.data[3]
 
+    def Print(self):
+        print("SerialLink Header:")
+        print("    Preamble      : %3i" % self.GetPreamble())
+        print("    DataLength    : %3i" % self.GetDataLength())
+        print("    DataChecksum  : %3i" % self.GetChecksum())
+        print("    DataProtocolId: %3i" % self.GetProtocolId())
+
 
 class SerialLink():
     def __init__(self, bcPinRx, bcPinTx):
@@ -69,19 +76,21 @@ class SerialLink():
         self.cbOnRxAvailable = cbOnRxAvailable
 
     def InitRx(self):
-        # open pin for reading serial
-        pigpio.exceptions = False
-        self.pigd.bb_serial_read_close(self.bcPinRx)
-        pigpio.exceptions = True
-        self.pigd.bb_serial_read_open(self.bcPinRx, self.BAUD)
+        if self.bcPinRx:
+            # open pin for reading serial
+            pigpio.exceptions = False
+            self.pigd.bb_serial_read_close(self.bcPinRx)
+            pigpio.exceptions = True
+            self.pigd.bb_serial_read_open(self.bcPinRx, self.BAUD)
 
-        # set up timer to check on incoming data
-        evm_SetTimeout(self.OnTimeoutCheckRx, self.RX_POLL_PERIOD_MS)
+            # set up timer to check on incoming data
+            evm_SetTimeout(self.OnTimeoutCheckRx, self.RX_POLL_PERIOD_MS)
 
     def InitTx(self):
-        pigpio.exceptions = False
-        self.pigd.set_mode(self.bcPinTx, pigpio.OUTPUT)
-        pigpio.exceptions = True
+        if self.bcPinTx:
+            pigpio.exceptions = False
+            self.pigd.set_mode(self.bcPinTx, pigpio.OUTPUT)
+            pigpio.exceptions = True
 
     def Send(self, protocolId, buf):
         # Create frame

@@ -49,7 +49,7 @@ class RFLinkHeader():
         return self.byteList[3]
 
     def Print(self):
-        print("Header:")
+        print("RFLink Header:")
         print("    Realm     : %3i" % self.GetRealm())
         print("    SrcAddr   : %3i" % self.GetSrcAddr())
         print("    DstAddr   : %3i" % self.GetDstAddr())
@@ -58,20 +58,33 @@ class RFLinkHeader():
 
 class RFLinkOverSerial():
     def __init__(self, serialLink):
-        self.serialLink = serialLink
+        if serialLink:
+            self.serialLink = serialLink
 
-        self.serialLink.SetCbOnRxAvailable(self.OnRxAvailable)
+            self.serialLink.SetCbOnRxAvailable(self.OnRxAvailable)
 
-        self.cbOnRxAvailable = None
+            self.cbOnRxAvailable = None
 
     def SetCbOnRxAvailable(self, cbOnRxAvailable):
         self.cbOnRxAvailable = cbOnRxAvailable
 
-    def OnRxAvailable(self, serialHdr, serialByteList):
+    def ParseRFLinkData(self, serialHdr, serialByteList):
+        retVal = None
+
         if len(serialByteList) >= RFLinkHeader.GetSize():
             rfHdr = RFLinkHeader(serialByteList[0:RFLinkHeader.GetSize()])
 
             rfByteList = serialByteList[RFLinkHeader.GetSize():]
+
+            retVal = (rfHdr, rfByteList)
+
+        return retVal
+
+    def OnRxAvailable(self, serialHdr, serialByteList):
+        rfHdrAndRfByteList = self.ParseRFLinkData(serialHdr, serialByteList)
+
+        if rfHdrAndRfByteList:
+            (rfHdr, rfByteList) = rfHdrAndRfByteList
 
             self.cbOnRxAvailable(rfHdr, rfByteList)
 

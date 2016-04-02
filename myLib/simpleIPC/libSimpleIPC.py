@@ -33,6 +33,10 @@ class SimpleIPCMessage(object):
     def GetClassName(cls):
         return cls.__name__
 
+    @classmethod
+    def GetClass(cls):
+        return cls
+
     def SetMessageType(self, messageType):
         self.messageType = messageType
 
@@ -73,7 +77,7 @@ class SimpleIPCMessage(object):
         formatStr = "    %-" + str(maxLen) + "s: %s"
 
         # Actually print
-        print(self.GetClassName())
+        print(self.GetClassName() + "[" + str(self.GetMessageType()) + "]")
         if len(getterList):
             for getter in getterList:
                 fn = getattr(self, "Get" + getter)
@@ -91,6 +95,9 @@ class SimpleIPCProtocolHandler():
     def __init__(self):
         # Keep a list of message handlers
         self.msgHandlerList = deque()
+
+        # Keep handle to underlying link type when event driven
+        self.linkType = None
 
     def PrintState(self):
         self.PrintMessageTypes()
@@ -211,24 +218,41 @@ class SimpleIPCProtocolHandler():
     def RegisterProtocolMessageHandler(self, handler):
         self.msgHandlerList.append(handler)
 
-    def OnRx(self, hdr, byteList):
-        if len(byteList) >= 2 and hdr.GetProtocolId() == 1:
+    def ParseSimpleIPCData(self, hdrMaybeRFLink, byteList):
+        retVal = None
+
+        if len(byteList) >= 2 and hdrMaybeRFLink.GetProtocolId() == 1:
             msg = SimpleIPCMessage(byteList[2:])
             msg.SetMessageType(*unpack("!H", buffer(byteList, 0, 2)))
 
-            if self.linkType == "SERIAL":
+            hdrRFLink = None
+            if self.linkType == "SERIAL" or self.linkType == None:
                 # Fake an RFLink header
-                hdr = RFLinkHeader()
-                hdr.SetRealm(0)
-                hdr.SetSrcAddr(0)
-                hdr.SetDstAddr(0)
-                hdr.SetProtocolId(self.PROTOCOL_ID)
+                hdrRFLink = RFLinkHeader()
+                hdrRFLink.SetRealm(0)
+                hdrRFLink.SetSrcAddr(0)
+                hdrRFLink.SetDstAddr(0)
+                hdrRFLink.SetProtocolId(self.PROTOCOL_ID)
 
-                self.OnSimpleIPCMsg(hdr, msg)
+                retVal = (hdrRFLink, msg)
             elif self.linkType == "RF":
-                self.OnSimpleIPCMsg(hdr, msg)
+                hdrRFLink = hdrMaybeRFLink
+                retVal = (hdrRFLink, msg)
 
-    def OnSimpleIPCMsg(self, hdr, msg):
+        return retVal
+
+    def OnRx(self, hdrMaybeRFLink, byteList):
+        hdrAndByteList = self.ParseSimpleIPCData(hdrMaybeRFLink, byteList)
+
+        if hdrAndMsg:
+            (hdr, msg) = hdrAndMsg
+
+            self.OnSimpleIPCMsg(hdr, msg)
+
+
+    def ParseSimpleIPCMessage(self, msg):
+        retVal = None
+
         # identify message
         for msgClass in self.GetSimpleIPCMessageClassList():
             if msgClass.MESSAGE_TYPE == msg.GetMessageType():
@@ -236,23 +260,27 @@ class SimpleIPCProtocolHandler():
                 # construct actual class to contain message.
                 msgParsed = msgClass(msg.GetByteList())
 
-                # offer to each handler which can handle it
-                for msgHandler in self.msgHandlerList:
-                    if self.HandlerCanHandleMsg(msgHandler, msgClass):
-                        # get a handle to the function
-                        fn = \
-                            getattr(msgHandler, \
-                                    ("OnHandle%s" % msgClass.GetClassName()))
-
-                        # call it
-                        fn(hdr, msgParsed)
+                retVal = msgParsed
 
                 break
 
+        return retVal
 
+    def OnSimpleIPCMsg(self, hdr, msg):
+        msgParsed = self.ParseSimpleIPCData(msg)
 
+        if msgParsed:
+            msgClass = msgParsed.GetClass()
 
+            # offer to each handler which can handle it
+            for msgHandler in self.msgHandlerList:
+                if self.HandlerCanHandleMsg(msgHandler, msgClass):
+                    # get a handle to the function
+                    fn = \
+                        getattr(msgHandler, \
+                                ("OnHandle%s" % msgClass.GetClassName()))
 
-
+                    # call it
+                    fn(hdr, msgParsed)
 
 
