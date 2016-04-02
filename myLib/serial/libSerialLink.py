@@ -47,10 +47,10 @@ class SerialLinkHeader():
 
     def Print(self):
         print("SerialLink Header:")
-        print("    Preamble      : %3i" % self.GetPreamble())
-        print("    DataLength    : %3i" % self.GetDataLength())
-        print("    DataChecksum  : %3i" % self.GetChecksum())
-        print("    DataProtocolId: %3i" % self.GetProtocolId())
+        print("    Preamble  : %3i" % self.GetPreamble())
+        print("    DataLength: %3i" % self.GetDataLength())
+        print("    Checksum  : %3i" % self.GetChecksum())
+        print("    ProtocolId: %3i" % self.GetProtocolId())
 
 
 class SerialLink():
