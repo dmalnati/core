@@ -54,7 +54,16 @@ class MessagePinState(SimpleIPCMessage):
     def GetPin(self):
         return unpack("B", buffer(self.byteList, 0, 1))[0]
 
+    def SetPin(self, pin):
+        self.byteList[0] = pack("B", int(pin))
+
     def GetValue(self):
         return unpack("B", buffer(self.byteList, 1, 1))[0]
+
+    def SetValue(self, value):
+        self.byteList[1] = pack("B", int(value))
+
+
+
 
 

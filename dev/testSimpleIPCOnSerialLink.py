@@ -39,8 +39,12 @@ class SimpleIPCMessageHandlerTest():
             msg = MessageRepGetTemperature(byteList)
             msg.Print()
 
-
         return True
+
+    def OnHandleUnknownMessage(self, hdr, msg):
+        print("OnHandleUnknownMessage")
+        hdr.Print()
+        msg.Print()
 
     def OnStdin(self, line):
         # look for:

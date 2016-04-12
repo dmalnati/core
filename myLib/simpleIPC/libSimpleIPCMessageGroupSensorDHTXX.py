@@ -28,13 +28,24 @@ class MessageRepGetTemperature(SimpleIPCMessage):
     def GetTempF(self):
         return unpack("B", buffer(self.byteList, 0, 1))[0]
 
+    def SetTempF(self, value):
+        self.byteList[0] = pack("B", int(value))
+
     def GetTempC(self):
         return unpack("B", buffer(self.byteList, 1, 1))[0]
+
+    def SetTempC(self, value):
+        self.byteList[1] = pack("B", int(value))
 
     def GetPctHumidity(self):
         return unpack("B", buffer(self.byteList, 2, 1))[0]
 
+    def SetPctHumidity(self, value):
+        self.byteList[2] = pack("B", int(value))
+
     def GetHeatIndex(self):
         return unpack("B", buffer(self.byteList, 3, 1))[0]
 
+    def SetHeatIndex(self, value):
+        self.byteList[3] = pack("B", int(value))
 

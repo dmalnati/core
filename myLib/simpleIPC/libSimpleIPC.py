@@ -49,6 +49,36 @@ class SimpleIPCMessage(object):
     def GetByteList(self):
         return self.byteList
 
+    def Set(self, name, value):
+        retVal = False
+
+        for setter in self.GetSetterList():
+            if setter == name:
+                retVal = True
+
+                fn = getattr(self, ("Set%s" % setter))
+
+                # call it
+                fn(value)
+
+                break
+
+        return retVal
+
+    def GetSetterList(self):
+        # find list of Setters
+        setterList = []
+
+        # get attrs in order the hard way
+        for line in inspect.getsource(self.__class__).split("\n"):
+            m = re.match(r"^ *def (Set.+)\(.*", line)
+
+            if m:
+                attr = m.group(1)
+                setterList.append(attr[3:])
+
+        return setterList
+
     def Print(self):
         # find list of Getters
         getterList = []
@@ -77,7 +107,7 @@ class SimpleIPCMessage(object):
         formatStr = "    %-" + str(maxLen) + "s: %s"
 
         # Actually print
-        print(self.GetClassName() + "[" + str(self.GetMessageType()) + "]")
+        print("[" + str(self.GetMessageType()) + "]" + self.GetClassName())
         if len(getterList):
             for getter in getterList:
                 fn = getattr(self, "Get" + getter)
@@ -99,6 +129,26 @@ class SimpleIPCProtocolHandler():
         # Keep handle to underlying link type when event driven
         self.linkType = None
 
+        # Set up default addressing if in RFLink mode
+        self.realm   = 0
+        self.srcAddr = 0
+        self.dstAddr = 0
+
+    def PrintAddr(self):
+        if self.linkType == "SERIAL":
+            print("SERIAL Addressing")
+        elif self.linkType == "RF":
+            print("RFLink Connection")
+
+            hdr = RFLinkHeader()
+
+            hdr.SetRealm(self.realm)
+            hdr.SetSrcAddr(self.srcAddr)
+            hdr.SetDstAddr(self.dstAddr)
+            hdr.SetProtocolId(self.PROTOCOL_ID)
+
+            hdr.Print()
+
     def PrintState(self):
         self.PrintMessageTypes()
         self.PrintMessageHandlerSupport()
@@ -109,8 +159,34 @@ class SimpleIPCProtocolHandler():
     def HandlerCanHandleUnknownMsg(self, msgHandler):
         return "OnHandleUnknownMessage" in dir(msgHandler)
 
+    def TryToGetHandlerFn(self, msgHandler, msg):
+        retVal = None
+
+        if self.HandlerCanHandleMsg(msgHandler, msg):
+            # get a handle to the function
+            retVal = getattr(msgHandler, \
+                             ("OnHandle%s" % msg.GetClassName()))
+        elif self.HandlerCanHandleUnknownMsg(msgHandler):
+            # get a handle to the function
+            retVal = getattr(msgHandler, "OnHandleUnknownMessage")
+
+        return retVal
+
+
     def GetSimpleIPCMessageClassList(self):
         return SimpleIPCMessage.__subclasses__()
+
+    # Get an instance, not the class object
+    def GetSimpleIPCMessageByMessageType(self, msgType):
+        retVal = None
+
+        for cls in self.GetSimpleIPCMessageClassList():
+            if str(cls.MESSAGE_TYPE) == str(msgType):
+                retVal = cls()
+
+                break
+
+        return retVal
 
     def PrintMessageHandlerSupport(self):
         print("%i Installed Message Handlers:" % len(self.msgHandlerList))
@@ -190,11 +266,21 @@ class SimpleIPCProtocolHandler():
 
         self.link.SetCbOnRxAvailable(self.OnRx)
 
-    def RegisterRFLinkDefaultAddressing(self, realm, srcAddr):
+    def RegisterRFLinkDefaultAddressing(self, realm, srcAddr, dstAddr):
         self.realm   = realm
         self.srcAddr = srcAddr
+        self.dstAddr = dstAddr
 
-    def Send(self, dstAddr, msg):
+    def Send(self, msg):
+        self.SendToFull(self.realm, self.srcAddr, self.dstAddr, msg)
+
+    def SendTo(self, dstAddr, msg):
+        self.SendToFull(self.realm, self.srcAddr, dstAddr, msg)
+
+    def SendToFrom(self, srcAddr, dstAddr, msg):
+        self.SendToFull(self.realm, srcAddr, dstAddr, msg)
+
+    def SendToFull(self, realm, srcAddr, dstAddr, msg):
         byteList = bytearray()
 
         byteList.extend([0] * 2)
@@ -208,8 +294,8 @@ class SimpleIPCProtocolHandler():
         elif self.linkType == "RF":
             # RFLink requires addressing, so fill out header
             hdr = RFLinkHeader()
-            hdr.SetRealm(self.realm)
-            hdr.SetSrcAddr(self.srcAddr)
+            hdr.SetRealm(realm)
+            hdr.SetSrcAddr(srcAddr)
             hdr.SetDstAddr(dstAddr)
             hdr.SetProtocolId(self.PROTOCOL_ID)
 
@@ -241,11 +327,12 @@ class SimpleIPCProtocolHandler():
 
         return retVal
 
+
     def OnRx(self, hdrMaybeRFLink, byteList):
         hdrAndByteList = self.ParseSimpleIPCData(hdrMaybeRFLink, byteList)
 
-        if hdrAndMsg:
-            (hdr, msg) = hdrAndMsg
+        if hdrAndByteList:
+            (hdr, msg) = hdrAndByteList
 
             self.OnSimpleIPCMsg(hdr, msg)
 
@@ -266,21 +353,27 @@ class SimpleIPCProtocolHandler():
 
         return retVal
 
+
     def OnSimpleIPCMsg(self, hdr, msg):
-        msgParsed = self.ParseSimpleIPCData(msg)
+        msgParsed = self.ParseSimpleIPCMessage(msg)
 
         if msgParsed:
             msgClass = msgParsed.GetClass()
 
             # offer to each handler which can handle it
             for msgHandler in self.msgHandlerList:
-                if self.HandlerCanHandleMsg(msgHandler, msgClass):
-                    # get a handle to the function
-                    fn = \
-                        getattr(msgHandler, \
-                                ("OnHandle%s" % msgClass.GetClassName()))
+                # try to get function to call
+                fn = self.TryToGetHandlerFn(msgHandler, msgClass)
 
-                    # call it
+                if fn:
                     fn(hdr, msgParsed)
+
+
+
+
+
+
+
+
 
 
