@@ -12,46 +12,48 @@ from myLib.serial import *
 
 
 class TestSerialLink():
-    def __init__(self, bcPinRx, bcPinTx):
+    def __init__(self, bcPinRx, bcPinTx, verbose):
         self.SEND_INTERVAL_MS = 2000
+
+        self.verbose = verbose
 
         # Get a SerialLink
         self.serialLink = SerialLink(bcPinRx, bcPinTx)
 
         self.serialLink.SetCbOnRxAvailable(self.OnRx)
 
-        # Set up timer to periodically send data
-        evm_SetTimeout(self.OnTimeoutTx, self.SEND_INTERVAL_MS)
-
     def OnRx(self, hdr, byteList):
-        print("OnRx")
-
-        Log("HDR: %i bytes" % hdr.GetSize())
-        Log("  Preamble  : %3i" % hdr.GetPreamble())
-        Log("  DataLength: %3i" % hdr.GetDataLength())
-        Log("  Checksum  : %3i" % hdr.GetChecksum())
-        Log("  ProtocolId: %3i" % hdr.GetProtocolId())
+        if self.verbose:
+            Log("HDR: %i bytes" % hdr.GetSize())
+            Log("  Preamble  : %3i" % hdr.GetPreamble())
+            Log("  DataLength: %3i" % hdr.GetDataLength())
+            Log("  Checksum  : %3i" % hdr.GetChecksum())
+            Log("  ProtocolId: %3i" % hdr.GetProtocolId())
 
         count = len(byteList)
-        Log("MSG: %i bytes" % count)
+        if self.verbose:
+            Log("MSG: %i bytes" % count)
+
         for byte in byteList:
             Log(("  %3i" % byte))
 
-    def OnTimeoutTx(self):
-        protocolId = 1
-        self.serialLink.Send(protocolId, "heynow")
-        evm_SetTimeout(self.OnTimeoutTx, self.SEND_INTERVAL_MS)
+        if self.verbose:
+            print("")
 
 
 def Main():
-    if len(sys.argv) != 3:
-        print("Usage: " + sys.argv[0] + " <bcPinRx> <bcPinTx>")
+    if len(sys.argv) != 3 and len(sys.argv) != 4:
+        print("Usage: " + sys.argv[0] + " <bcPinRx> <bcPinTx> [-v]")
         sys.exit(-1)
 
     bcPinRx = int(sys.argv[1])
     bcPinTx = int(sys.argv[2])
+    verbose = 0
 
-    tsl = TestSerialLink(bcPinRx, bcPinTx)
+    if len(sys.argv) == 4:
+        verbose = 1
+
+    tsl = TestSerialLink(bcPinRx, bcPinTx, verbose)
 
     Log("Waiting")
     evm_MainLoop()
