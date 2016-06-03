@@ -61,7 +61,7 @@ def WatchStdinRaw(cbFn):
     loop = tornado.ioloop.IOLoop.instance()
     loop.add_handler(sys.stdin, Handler, tornado.ioloop.IOLoop.READ)
 
-def WatchStdin(cbFn):
+def WatchStdin(cbFn, stripNewline=True):
     def Handler():
         line   = sys.stdin.readline()
         closed = False
@@ -69,20 +69,21 @@ def WatchStdin(cbFn):
         if not line:
             closed = True
         else:
-            line = line.rstrip("\n")
+            if stripNewline:
+                line = line.rstrip("\n")
 
         cbFn(closed, line)
 
     WatchStdinRaw(Handler)
 
-def WatchStdinEndLoopOnEOF(cbFn):
+def WatchStdinEndLoopOnEOF(cbFn, stripNewline=True):
     def Handler(closed, line):
         if not closed:
             cbFn(line)
         else:
             evm_MainLoopFinish()
 
-    WatchStdin(Handler)
+    WatchStdin(Handler, stripNewline)
 
 
 #######################################################################
