@@ -45,12 +45,12 @@ def Main():
         sys.stdout.write(byteList)
         sys.stdout.flush()
 
-    def OnKeyboardReadable(line):
-        ser.Send(line)
+    def OnKeyboardReadable(byteList):
+        ser.Send(byteList)
 
     # register callbacks
     ser.SetCbOnRxAvailable(OnSerialReadable)
-    WatchStdinEndLoopOnEOF(OnKeyboardReadable, stripNewline=False)
+    WatchStdinEndLoopOnEOF(OnKeyboardReadable, binary=True)
 
     evm_MainLoop()
 

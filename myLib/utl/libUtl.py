@@ -3,6 +3,8 @@ import sys
 import time
 import datetime
 import binascii
+import fcntl
+import os
 
 import json
 
@@ -61,29 +63,40 @@ def WatchStdinRaw(cbFn):
     loop = tornado.ioloop.IOLoop.instance()
     loop.add_handler(sys.stdin, Handler, tornado.ioloop.IOLoop.READ)
 
-def WatchStdin(cbFn, stripNewline=True):
+def WatchStdin(cbFn, binary=False):
     def Handler():
-        line   = sys.stdin.readline()
+        line = ""
+
+        if binary:
+            line = sys.stdin.read()
+        else:
+            line = sys.stdin.readline()
+
         closed = False
 
         if not line:
             closed = True
         else:
-            if stripNewline:
+            if not binary:
                 line = line.rstrip("\n")
 
         cbFn(closed, line)
 
+    if binary:
+        fd = sys.stdin.fileno()
+        fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+        fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+
     WatchStdinRaw(Handler)
 
-def WatchStdinEndLoopOnEOF(cbFn, stripNewline=True):
+def WatchStdinEndLoopOnEOF(cbFn, binary=False):
     def Handler(closed, line):
         if not closed:
             cbFn(line)
         else:
             evm_MainLoopFinish()
 
-    WatchStdin(Handler, stripNewline)
+    WatchStdin(Handler, binary)
 
 
 #######################################################################

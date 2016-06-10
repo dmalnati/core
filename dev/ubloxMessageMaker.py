@@ -78,6 +78,7 @@ class UbxMessageMaker():
             self.PrintDebug(''.join('{:02X} '.format(b) for b in byteList))
         else:
             sys.stdout.write(byteList)
+            sys.stdout.flush()
 
     def PrintDebug(self, strMsg):
         if self.debugOnly:
