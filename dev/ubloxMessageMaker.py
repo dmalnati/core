@@ -223,6 +223,9 @@ class UbxMessageMaker():
 
         return byteList
 
+    def GetMsgLengthFromFields(self, byteList):
+        NON_FIELD_DATA_LENGTH = 8
+        return len(byteList) - NON_FIELD_DATA_LENGTH
 
     def ConvertFile(self, filename):
         fd = open(filename, "r")
@@ -251,7 +254,11 @@ class UbxMessageMaker():
                 if len(colNameList) == len(rowValList):
                     byteList = self.ConvertLine(colNameList, rowValList)
 
-                    self.PrintDebug(str(len(byteList)) + " bytes:")
+                    self.PrintDebug(
+                        str(self.GetMsgLengthFromFields(byteList)) +
+                        " field bytes, " +
+                        str(len(byteList)) + " bytes total"
+                    )
                     self.PrintByteList(byteList)
                     self.PrintMessage(colNameList, rowValList, byteList)
 
