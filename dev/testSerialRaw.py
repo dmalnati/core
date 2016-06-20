@@ -11,26 +11,67 @@ from myLib.utl import *
 from myLib.serial import *
 
 
+def GroupArgs(argv):
+    argList  = []
+    flagList = []
+
+    if len(argv):
+        for arg in argv:
+            if arg[0] == "-" and arg != "-":
+                flagList.append(arg)
+            else:
+                argList.append(arg)
+
+    return (argList, flagList)
+
+
+FLAG_NTOR = False
+def ProcessFlags(flagList):
+    global FLAG_NTOR
+
+    for flag in flagList:
+        if flag == "-ntor":
+            FLAG_NTOR = True
+
+def PreprocessInput(byteList):
+    global FLAG_NTOR
+
+    byteListNew = bytearray()
+
+    for byte in byteList:
+        if FLAG_NTOR:
+            if byte == "\n":
+                byte = "\r"
+        
+        byteListNew.extend(byte)
+
+    return byteListNew
+
 
 def Main():
-    if len(sys.argv) < 2 or len(sys.argv) > 4:
+    argList, flagList = GroupArgs(sys.argv)
+
+    ProcessFlags(flagList)
+
+    if len(argList) < 2 or len(argList) > 4:
         print("Usage: "   +
               sys.argv[0] +
-              " <bcPinRx> [<bcPinTx=->] [<baud=9600>]")
+              " <bcPinRx> [<bcPinTx=->] [<baud=9600>] [-ntor]")
         print("    bcPinRx can be - if not in use (write only)")
         print("    bcPinTx can be - if not in use (read only)")
+        print("    use -ntor flag to convert \\n to \\r")
         sys.exit(-1)
 
     # set default arguments
-    bcPinRx = sys.argv[1]
+    bcPinRx = argList[1]
     bcPinTx = "-"
     baud    = 9600
 
-    if len(sys.argv) > 2:
-        bcPinTx = sys.argv[2]
+    if len(argList) > 2:
+        bcPinTx = argList[2]
 
-        if len(sys.argv) > 3:
-            baud = sys.argv[3]
+        if len(argList) > 3:
+            baud = argList[3]
 
     # parse arguments
     bcPinRx = None if bcPinRx == "-" else int(bcPinRx)
@@ -46,6 +87,7 @@ def Main():
         sys.stdout.flush()
 
     def OnKeyboardReadable(byteList):
+        byteList = PreprocessInput(byteList)
         ser.Send(byteList)
 
     # register callbacks
