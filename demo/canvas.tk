@@ -1,0 +1,199 @@
+#!/bin/sh
+# \
+exec wish "$0" "$@"
+
+# http://www.tkdocs.com/tutorial/canvas.html
+ 
+set VAL_TABLE_LEN 256
+set VAL_COUNT     256
+ 
+set SELECTED_BOX_SIZE_PX 2
+ 
+set CANVAS_HEIGHT_PX [expr $VAL_COUNT     * $SELECTED_BOX_SIZE_PX]
+set CANVAS_WIDTH_PX  [expr $VAL_TABLE_LEN * $SELECTED_BOX_SIZE_PX]
+ 
+ 
+proc Paint { can x y } {
+    global SELECTED_BOX_SIZE_PX
+    global IDX__RECT
+ 
+    puts "Paint $x $y"
+ 
+    # Calculate location of upper left
+ 
+    set xLeft  \
+        [expr {int($x / $SELECTED_BOX_SIZE_PX) * $SELECTED_BOX_SIZE_PX}]
+    set xRight \
+        [expr {$xLeft + $SELECTED_BOX_SIZE_PX}]
+ 
+    set yTop    \
+        [expr {int($y / $SELECTED_BOX_SIZE_PX) * $SELECTED_BOX_SIZE_PX}]
+    set yBottom \
+        [expr {$yTop + $SELECTED_BOX_SIZE_PX}]
+ 
+ 
+    set idx [expr {$xLeft / 2}]
+    set rect $IDX__RECT($idx)
+ 
+    $can coords $rect $xLeft $yTop $xRight $yBottom
+}
+ 
+ 
+proc GetPointListFromLine { xStart yStart xEnd yEnd } {
+    global SELECTED_BOX_SIZE_PX
+ 
+    set xDiff [expr {$xEnd - $xStart}]
+    set yDiff [expr {$yEnd - $yStart}]
+ 
+#        puts ""
+        puts "xStart($xStart), yStart($yStart), xEnd($xEnd), yEnd($yEnd)"
+#        puts "xDiff($xDiff), yDiff($yDiff)"
+ 
+    set xStepSize [expr {$xDiff >= 0 ? 1 : -1}]
+    set xStepSize [expr {$xStepSize * $SELECTED_BOX_SIZE_PX}]
+    set yStepSize 0
+    if { $xDiff != 0 } {
+        set yStepSize [expr {double($yDiff) / $xDiff}]
+    }
+    set yStepSize [expr {$yDiff >= 0 ? abs($yStepSize) : -abs($yStepSize)}]
+ 
+#        puts "xStepSize($xStepSize), yStepSize($yStepSize)"
+ 
+    set step 0
+    #set stepCount [expr {abs($xDiff) + 1}]
+    set stepCount \
+        [expr { int((double(abs($xDiff)) / $SELECTED_BOX_SIZE_PX)) + 1 }]
+ 
+ 
+    set xyPointList [list]
+ 
+    while { $step < $stepCount } {
+        set x [expr {int($xStart + ($step * $xStepSize))}]
+        set y [expr {int($yStart + ($step * $yStepSize))}]
+ 
+            puts "  $x $y"
+ 
+        lappend xyPointList $x $y
+ 
+        incr step
+    }
+ 
+    return $xyPointList
+}
+ 
+proc GetUpperLimitX { } {
+    global CANVAS_WIDTH_PX
+ 
+    return [expr $CANVAS_WIDTH_PX]
+}
+ 
+proc GetUpperLimitY { } {
+    global CANVAS_HEIGHT_PX
+ 
+    return [expr $CANVAS_HEIGHT_PX]
+}
+ 
+proc OnLineStart { can xStart yStart } {
+    global X_LAST
+    global Y_LAST
+ 
+    if { $xStart >= 0 && $xStart < [GetUpperLimitX] &&
+         $yStart >= 0 && $yStart < [GetUpperLimitY] } {
+        Paint $can $xStart $yStart
+ 
+        set X_LAST $xStart
+        set Y_LAST $yStart
+    }
+}
+ 
+proc OnLineNextPoint { can xEnd yEnd } {
+    global X_LAST
+    global Y_LAST
+ 
+    if { $xEnd >= 0 && $xEnd < [GetUpperLimitX] &&
+         $yEnd >= 0 && $yEnd < [GetUpperLimitY] } {
+        foreach { x y } [GetPointListFromLine $X_LAST $Y_LAST $xEnd $yEnd] {
+            Paint $can $x $y
+        }
+ 
+        set X_LAST $xEnd
+        set Y_LAST $yEnd
+    }
+}
+ 
+ 
+array set IDX__RECT [list]
+proc CreateCanvasElements { can } {
+    global SELECTED_BOX_SIZE_PX
+    global IDX__RECT
+ 
+    for { set i 0 } { $i < 256 } { incr i } {
+        set xLeft [expr {$i * 2}]
+        set xRight [expr {$xLeft + $SELECTED_BOX_SIZE_PX}]
+ 
+        set yTop 256
+        set yBottom [expr {$yTop + $SELECTED_BOX_SIZE_PX}]
+ 
+        set rect \
+            [$can create rectangle $xLeft $yTop $xRight $yBottom -fill blue]
+ 
+        set IDX__RECT($i) $rect
+    }
+ 
+    set xMin 0
+    set yMin 0
+    set xMid [expr {128 * $SELECTED_BOX_SIZE_PX}]
+    set yMid [expr {128 * $SELECTED_BOX_SIZE_PX}]
+    set xMax [expr {256 * $SELECTED_BOX_SIZE_PX}]
+    set yMax [expr {256 * $SELECTED_BOX_SIZE_PX}]
+ 
+    # Draw horizontal line
+    $can create rectangle $xMin $yMid $xMax $yMid -fill red
+ 
+    # Draw vertical line
+    $can create rectangle $xMid $yMin $xMid $yMax -fill red
+}
+ 
+proc DrawCosine { can } {
+    for { set i 0 } { $i < 256 } { incr i } {
+        set radFullCircle [expr {2 * 3.1415926}]
+ 
+        set x [expr {$i * 2}]
+        set y [expr 256 + int(256 * cos((double($i+1)/256.0) * $radFullCircle))]
+ 
+        Paint $can $x $y
+    }
+}
+ 
+proc SetUpCanvas { } {
+    global CANVAS_HEIGHT_PX
+    global CANVAS_WIDTH_PX
+ 
+    # Set up canvas and bindings
+    canvas .canvas -height $CANVAS_HEIGHT_PX -width $CANVAS_WIDTH_PX
+ 
+    bind .canvas <1>         [list OnLineStart     .canvas %x %y]
+    bind .canvas <B1-Motion> [list OnLineNextPoint .canvas %x %y]
+    bind .canvas <3>         [list DrawCosine      .canvas]
+ 
+    CreateCanvasElements .canvas
+ 
+    # Set up visible grid
+    grid .canvas -sticky nwes -column 0 -row 0
+    grid columnconfigure . 0 -weight 1
+    grid rowconfigure . 0 -weight 1
+ 
+    return .canvas
+}
+ 
+ 
+proc Main { } {
+    global argc
+    global argv
+    global argv0
+ 
+    set can [SetUpCanvas]
+    DrawCosine $can
+}
+ 
+Main
