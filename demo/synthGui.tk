@@ -9,19 +9,62 @@ exec wish "$0" "$@"
 # http://www.tkdocs.com/tutorial/grid.html
 # https://www.tcl.tk/man/tcl/TkCmd/contents.htm
  
+
+array set MSG_TYPE__NUMBER {
+    DEFAULT 0
+    SET_OSCILLATOR_1_FREQUENCY 11
+    SET_OSCILLATOR_1_WAVE_TYPE 12
+    SET_OSCILLATOR_2_FREQUENCY 21
+    SET_OSCILLATOR_2_WAVE_TYPE 22
+    SET_LFO_FREQUENCY 31
+    SET_LFO_WAVE_TYPE 32
+    ENVELOPE_ENABLE 41
+    ENVELOPE_DISABLE 42
+}
+ 
+ 
  
 
-proc PrintData { data } {
-    # dataLength
-    # data
+proc SendData { data } {
+    set dataLengthAsInt [binary format c [string length $data]]
+    
+    set buf "$dataLengthAsInt$data"
+    
+    Puts "sending [string length $buf] bytes total"
+    Puts "sending [string length $data] bytes data"
+    
+    puts -nonewline stdout $buf
+    flush stdout
+}
+
+proc AppendMessageType { bufName msgType } {
+    global MSG_TYPE__NUMBER
+    
+    upvar 1 $bufName buf
+    
+    set num $MSG_TYPE__NUMBER(DEFAULT)
+    
+    if { [info exists MSG_TYPE__NUMBER($msgType)] } {
+        set num $MSG_TYPE__NUMBER($msgType)
+    }
+    
+    AppendU8 buf $num
 }
 
 proc AppendU8 { bufName val } {
     upvar 1 $bufName buf
+    
+    append buf [binary format c $val]
 }
 
 proc AppendU16 { bufName val } {
     upvar 1 $bufName buf
+    
+    append buf [binary format S $val]
+}
+
+proc MakeBuf { } {
+    return ""
 }
 
 
@@ -31,13 +74,16 @@ proc PrintState { } {
 }
 
 
+proc Puts { str } {
+    puts stderr $str
+}
 
 
 
 
 
 proc OnSampleRateChange { val } {
-    puts "SampleRate: $val"
+    Puts "SampleRate: $val"
 }
 
 proc MakeSampleRateGrid { parent freqLow freqHigh freqDefault } {
@@ -70,11 +116,68 @@ proc MakeSampleRateGrid { parent freqLow freqHigh freqDefault } {
 proc OnOscillatorWaveTypeChange { oscName wavetypeName } {
     upvar #0 $wavetypeName wavetype
     
-    puts "WaveType: $oscName $wavetype"
+    Puts "WaveType: $oscName $wavetype"
+    
+    SendOscillatorWaveTypeChange $oscName $wavetype
+}
+
+proc SendOscillatorWaveTypeChange { oscName wavetype } {
+    set buf [MakeBuf]
+    
+    set waveNum 1
+    
+    if { $wavetype == "none" } {
+        set waveNum 0
+    } elseif { $wavetype == "sine" } {
+        set waveNum 1
+    } elseif { $wavetype == "sawr" } {
+        set waveNum 2
+    } elseif { $wavetype == "sawl" } {
+        set waveNum 3
+    } elseif { $wavetype == "square" } {
+        set waveNum 4
+    } elseif { $wavetype == "triangle" } {
+        set waveNum 5
+    }
+    
+
+    if { $oscName == "osc1" } {
+        AppendMessageType buf SET_OSCILLATOR_1_WAVE_TYPE
+        AppendU8          buf $waveNum
+        SendData $buf
+    } elseif { $oscName == "osc2" } {
+        AppendMessageType buf SET_OSCILLATOR_2_WAVE_TYPE
+        AppendU8          buf $waveNum
+        SendData $buf
+    } elseif { $oscName == "lfo" } {
+        AppendMessageType buf SET_LFO_WAVE_TYPE
+        AppendU8          buf $waveNum
+        SendData $buf
+    }
 }
 
 proc OnOscillatorFrequencyChange { oscName val } {
-    puts "WaveFreqChange: $oscName $val"
+    Puts "WaveFreqChange: $oscName $val"
+    
+    SendOscillatorFrequencyChange $oscName $val
+}
+
+proc SendOscillatorFrequencyChange { oscName val } {
+    set buf [MakeBuf]
+
+    if { $oscName == "osc1" } {
+        AppendMessageType buf SET_OSCILLATOR_1_FREQUENCY
+        AppendU16         buf $val
+        SendData $buf
+    } elseif { $oscName == "osc2" } {
+        AppendMessageType buf SET_OSCILLATOR_2_FREQUENCY
+        AppendU16         buf $val
+        SendData $buf
+    } elseif { $oscName == "lfo" } {
+        AppendMessageType buf SET_LFO_FREQUENCY
+        AppendU16         buf $val
+        SendData $buf
+    }
 }
 
 proc MakeOscillatorGrid { parent oscName title freqLow freqHigh freqDefault waveDefault } {
@@ -131,8 +234,36 @@ proc MakeOscillatorGrid { parent oscName title freqLow freqHigh freqDefault wave
 
 
 proc OnEnvelopeADSRChange { param val } {
-    puts "EnvelopADSR: $param $val"
+    Puts "EnvelopADSR: $param $val"
 }
+
+proc OnEnvelopeADSREnableChange { valName } {
+    upvar #0 $valName val
+    
+    Puts "OnEnvelopeADSREnableChange: $val"
+    
+    if { $val } {
+        SendEnvelopeADSREnable
+    } else {
+        SendEnvelopeADSRDisable
+    }
+}
+
+proc SendEnvelopeADSREnable { } {
+    set buf [MakeBuf]
+
+    AppendMessageType buf ENVELOPE_ENABLE
+    
+    SendData $buf
+}
+proc SendEnvelopeADSRDisable { } {
+    set buf [MakeBuf]
+
+    AppendMessageType buf ENVELOPE_DISABLE
+    
+    SendData $buf
+}
+
 
 proc MakeEnvelopeADSR { parent
                         aLow aHigh aDefault 
@@ -152,6 +283,9 @@ proc MakeEnvelopeADSR { parent
     ttk::label $this.labelR -text "R"
  
     # Controls
+    ttk::checkbutton $this.checkbutton -text "Enable" \
+        -variable $this.checkbuttonVal \
+        -command [list OnEnvelopeADSREnableChange $this.checkbuttonVal]
     scale $this.scaleA -orient vertical -length 100 -from $aHigh -to $aLow \
         -command [list OnEnvelopeADSRChange A]
     scale $this.scaleD -orient vertical -length 100 -from $dHigh -to $dLow \
@@ -162,6 +296,7 @@ proc MakeEnvelopeADSR { parent
         -command [list OnEnvelopeADSRChange R]
     
     # Set defaults
+    $this.checkbutton invoke
     $this.scaleA set $aDefault
     $this.scaleD set $dDefault
     $this.scaleS set $sDefault
@@ -169,7 +304,9 @@ proc MakeEnvelopeADSR { parent
     
     # Grid
     grid $this
+    #grid $this.label  -row 0 -column 0 -columnspan 4 -sticky w
     grid $this.label  -row 0 -column 0 -columnspan 4 -sticky w
+    grid $this.checkbutton -row 0 -column 3
 
     grid $this.labelA -row 1 -column 0
     grid $this.labelD -row 1 -column 1
@@ -195,9 +332,9 @@ proc SetUpGui { } {
     set sampleRateGrid [MakeSampleRateGrid .c 10000 20000 12000]
  
     # Oscillator
-    set osc1Grid [MakeOscillatorGrid .c osc1 "Oscillator 1" 50 10000 440 sine]
-    set osc2Grid [MakeOscillatorGrid .c osc2 "Oscillator 2" 50 10000 420 none]
-    set lfoGrid  [MakeOscillatorGrid .c lfo  "LFO"           1   100  40 sine]
+    set osc1Grid [MakeOscillatorGrid .c osc1 "Oscillator 1" 1 1500 440 sine]
+    set osc2Grid [MakeOscillatorGrid .c osc2 "Oscillator 2" 1 1500 420 none]
+    set lfoGrid  [MakeOscillatorGrid .c lfo  "LFO"          1  100  40 sine]
  
     # EnvelopADSR
     set envADSRGrid [MakeEnvelopeADSR .c        \
@@ -215,13 +352,16 @@ proc SetUpGui { } {
     grid $envADSRGrid    -row 4 -sticky ew
 }
  
- 
+proc Init { } {
+    fconfigure stdout -translation binary
+}
  
 proc Main { } {
     global argc
     global argv
     global argv0
- 
+
+    Init
     SetUpGui
 }
  
