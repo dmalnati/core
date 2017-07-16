@@ -104,6 +104,7 @@ array set MSG_TYPE__NUMBER {
     SET_LFO_WAVE_TYPE 32
     SET_LFO_PHASE_OFFSET 33
     SET_LFO_VIBRATO_PCT 34
+    SET_LFO_TROMOLO_PCT 35
     ENVELOPE_ENABLE 41
     ENVELOPE_DISABLE 42
 }
@@ -220,6 +221,16 @@ proc SendOscillatorVibratoPctChange { oscName val } {
     }
 }
 
+proc SendOscillatorTromoloPctChange { oscName val } {
+    set buf [MakeBuf]
+
+    if { $oscName == "lfo" } {
+        AppendMessageType buf SET_LFO_TROMOLO_PCT
+        AppendU8          buf $val
+        SendData $buf
+    }
+}
+
 
 
 proc SendOscillatorBalanceChange { val } {
@@ -292,6 +303,12 @@ proc OnOscillatorVibratoPctChange { oscName val } {
     Puts "Vibrato: $oscName $val"
     
     SendOscillatorVibratoPctChange $oscName $val
+}
+
+proc OnOscillatorTromoloPctChange { oscName val } {
+    Puts "Tromolo: $oscName $val"
+    
+    SendOscillatorTromoloPctChange $oscName $val
 }
 
 
@@ -483,16 +500,23 @@ proc MakeOscillatorGrid { parent oscName title freqLow freqHigh freqDefault wave
     if { $oscName == "lfo" } {
         # Label
         ttk::label $this.labelVibrato -text "Vib%"
+        ttk::label $this.labelTromolo -text "Tro%"
     
         # Vibrato selection
         scale $this.scaleVibrato \
             -orient horizontal -length 200 -from 0 -to 255 \
             -command [list OnOscillatorVibratoPctChange $oscName]
+        scale $this.scaleTromolo \
+            -orient horizontal -length 200 -from 0 -to 255 \
+            -command [list OnOscillatorTromoloPctChange $oscName]
+        
         # Set defaults
         $this.scaleVibrato set 127
+        $this.scaleTromolo set 127
         
         # Set bindings
         bind $this.scaleVibrato <3> [list $this.scaleVibrato set 127]
+        bind $this.scaleTromolo <3> [list $this.scaleTromolo set 127]
     }
     
     # Grid
@@ -514,6 +538,9 @@ proc MakeOscillatorGrid { parent oscName title freqLow freqHigh freqDefault wave
         #Grid
         grid $this.labelVibrato -row 5 -column 0 -sticky w
         grid $this.scaleVibrato -row 5 -column 1 -columnspan 3
+        
+        grid $this.labelTromolo -row 6 -column 0 -sticky w
+        grid $this.scaleTromolo -row 6 -column 1 -columnspan 3
     }
  
     return $this
