@@ -64,6 +64,12 @@ proc MakeBuf { } {
     return ""
 }
 
+proc AppendI8 { bufName val } {
+    upvar 1 $bufName buf
+    
+    append buf [binary format c $val]
+}
+
 proc AppendU8 { bufName val } {
     upvar 1 $bufName buf
     
@@ -86,13 +92,17 @@ proc AppendU16 { bufName val } {
 
 array set MSG_TYPE__NUMBER {
     DEFAULT 0
+    SET_PHASE_LOCK 5
     SET_OSCILLATOR_1_FREQUENCY 11
     SET_OSCILLATOR_1_WAVE_TYPE 12
+    SET_OSCILLATOR_1_PHASE_OFFSET 13
     SET_OSCILLATOR_BALANCE     20
     SET_OSCILLATOR_2_FREQUENCY 21
     SET_OSCILLATOR_2_WAVE_TYPE 22
+    SET_OSCILLATOR_2_PHASE_OFFSET 23
     SET_LFO_FREQUENCY 31
     SET_LFO_WAVE_TYPE 32
+    SET_LFO_PHASE_OFFSET 33
     ENVELOPE_ENABLE 41
     ENVELOPE_DISABLE 42
 }
@@ -118,23 +128,16 @@ proc AppendMessageType { bufName msgType } {
 #
 ############################################################
 
-proc SendOscillatorFrequencyChange { oscName val } {
-    set buf [MakeBuf]
 
-    if { $oscName == "osc1" } {
-        AppendMessageType buf SET_OSCILLATOR_1_FREQUENCY
-        AppendU16         buf $val
-        SendData $buf
-    } elseif { $oscName == "osc2" } {
-        AppendMessageType buf SET_OSCILLATOR_2_FREQUENCY
-        AppendU16         buf $val
-        SendData $buf
-    } elseif { $oscName == "lfo" } {
-        AppendMessageType buf SET_LFO_FREQUENCY
-        AppendU16         buf $val
-        SendData $buf
-    }
+proc SendPhaseLockChange { phaseLock } {
+    set buf [MakeBuf]
+    
+    AppendMessageType buf SET_PHASE_LOCK
+    AppendU8          buf $phaseLock
+    
+    SendData $buf
 }
+
 
 proc SendOscillatorWaveTypeChange { oscName wavetype } {
     set buf [MakeBuf]
@@ -169,6 +172,44 @@ proc SendOscillatorWaveTypeChange { oscName wavetype } {
         SendData $buf
     }
 }
+
+proc SendOscillatorFrequencyChange { oscName val } {
+    set buf [MakeBuf]
+
+    if { $oscName == "osc1" } {
+        AppendMessageType buf SET_OSCILLATOR_1_FREQUENCY
+        AppendU16         buf $val
+        SendData $buf
+    } elseif { $oscName == "osc2" } {
+        AppendMessageType buf SET_OSCILLATOR_2_FREQUENCY
+        AppendU16         buf $val
+        SendData $buf
+    } elseif { $oscName == "lfo" } {
+        AppendMessageType buf SET_LFO_FREQUENCY
+        AppendU16         buf $val
+        SendData $buf
+    }
+}
+
+proc SendOscillatorPhaseOffsetChange { oscName val } {
+    set buf [MakeBuf]
+
+    if { $oscName == "osc1" } {
+        AppendMessageType buf SET_OSCILLATOR_1_PHASE_OFFSET
+        AppendI8          buf $val
+        SendData $buf
+    } elseif { $oscName == "osc2" } {
+        AppendMessageType buf SET_OSCILLATOR_2_PHASE_OFFSET
+        AppendI8          buf $val
+        SendData $buf
+    } elseif { $oscName == "lfo" } {
+        AppendMessageType buf SET_LFO_PHASE_OFFSET
+        AppendI8          buf $val
+        SendData $buf
+    }
+}
+
+
 
 proc SendOscillatorBalanceChange { val } {
     set buf [MakeBuf]
@@ -208,6 +249,14 @@ proc OnSampleRateChange { val } {
 }
 
 
+proc OnPhaseLockChange { phaseLockName } {
+    upvar #0 $phaseLockName phaseLock
+    
+    Puts "PhaseLock: $phaseLock"
+    
+    SendPhaseLockChange $phaseLock
+}
+
 proc OnOscillatorWaveTypeChange { oscName wavetypeName } {
     upvar #0 $wavetypeName wavetype
     
@@ -220,6 +269,12 @@ proc OnOscillatorFrequencyChange { oscName val } {
     Puts "WaveFreqChange: $oscName $val"
     
     SendOscillatorFrequencyChange $oscName $val
+}
+
+proc OnOscillatorPhaseOffsetChange { oscName val } {
+    Puts "WaveFreqChange: $oscName $val"
+    
+    SendOscillatorPhaseOffsetChange $oscName $val
 }
 
 proc OnOscillatorBalanceChange { val } {
@@ -308,6 +363,28 @@ proc MakeEnvelopeADSR { parent
 }
 
 
+proc MakePhaseLockGrid { parent } {
+    set this ${parent}.oscPhaseLock
+    
+    # Create frame and use it from here forward
+    ttk::frame $this -padding "3 3 3 3" -relief sunken
+
+    # Label it
+    ttk::label $this.label  -text "Phase Lock"
+    
+    # Controls
+    ttk::checkbutton $this.phaseLock \
+        -variable $this.phaseLockVal \
+        -command [list OnPhaseLockChange $this.phaseLockVal]
+
+    # Grid
+    grid $this
+    grid $this.label     -row 0
+    grid $this.phaseLock -row 1
+    
+    return $this
+}
+
 proc MakeOscillatorBalance { parent } {
     set this ${parent}.oscBalance
 
@@ -339,7 +416,9 @@ proc MakeOscillatorGrid { parent oscName title freqLow freqHigh freqDefault wave
     ttk::frame $this -padding "3 3 3 3" -relief sunken
  
     # Label it
-    ttk::label $this.label -text $title
+    ttk::label $this.label      -text $title
+    ttk::label $this.labelFreq  -text "Freq"
+    ttk::label $this.labelPhase -text "Phase"
  
     # Add radiobuttons
     ttk::radiobutton $this.sine \
@@ -362,24 +441,33 @@ proc MakeOscillatorGrid { parent oscName title freqLow freqHigh freqDefault wave
         -command [list OnOscillatorWaveTypeChange $oscName $this.wavetype]
         
     # Frequency selection
-    scale $this.scale \
+    scale $this.scaleFreq \
         -orient horizontal -length 200 -from $freqLow -to $freqHigh \
         -command [list OnOscillatorFrequencyChange $oscName]
+        
+    # Phase selection
+    scale $this.scalePhase \
+        -orient horizontal -length 200 -from -128 -to 127 \
+        -command [list OnOscillatorPhaseOffsetChange $oscName]
 
     # Set defaults
     $this.$waveDefault invoke
-    $this.scale set $freqDefault
+    $this.scaleFreq set $freqDefault
+    $this.scaleFreq set 0
         
     # Grid
     grid $this
-    grid $this.label    -row 0 -column 0 -columnspan 3 -sticky w
-    grid $this.sine     -row 1 -column 0 -sticky w
-    grid $this.square   -row 1 -column 1 -sticky w
-    grid $this.triangle -row 1 -column 2 -sticky w
-    grid $this.sawl     -row 2 -column 0 -sticky w
-    grid $this.sawr     -row 2 -column 1 -sticky w
-    grid $this.none     -row 2 -column 2 -sticky w
-    grid $this.scale    -row 3 -column 0 -columnspan 3
+    grid $this.label      -row 0 -column 0 -columnspan 3 -sticky w
+    grid $this.sine       -row 1 -column 0 -sticky w
+    grid $this.square     -row 1 -column 1 -sticky w
+    grid $this.triangle   -row 1 -column 2 -sticky w
+    grid $this.sawl       -row 2 -column 0 -sticky w
+    grid $this.sawr       -row 2 -column 1 -sticky w
+    grid $this.none       -row 2 -column 2 -sticky w
+    grid $this.labelFreq  -row 3 -column 0 -sticky w
+    grid $this.scaleFreq  -row 3 -column 1 -columnspan 3
+    grid $this.labelPhase -row 4 -column 0 -sticky w
+    grid $this.scalePhase -row 4 -column 1 -columnspan 3
  
     return $this
 }
@@ -441,8 +529,9 @@ proc SetUpGui { } {
     set sampleRateGrid [MakeSampleRateGrid .c 10000 20000 12000]
  
     # Oscillator
-    set oscGrid [MakeOscillatorControls .c]
-    set lfoGrid [MakeOscillatorGrid .c lfo  "LFO" 1 100 40 none]
+    set phaseLock [MakePhaseLockGrid .c]
+    set oscGrid   [MakeOscillatorControls .c]
+    set lfoGrid   [MakeOscillatorGrid .c lfo  "LFO" 1 100 40 none]
  
     # EnvelopADSR
     set envADSRGrid [MakeEnvelopeADSR .c        \
@@ -452,11 +541,12 @@ proc SetUpGui { } {
                                       1 500  20]
  
     # Pack it all in
-    grid .c              -row 0 -sticky nsew
-    grid $sampleRateGrid -row 0 -sticky ew
-    grid $oscGrid        -row 1 -sticky ew
-    grid $lfoGrid        -row 2 -sticky ew
-    grid $envADSRGrid    -row 3 -sticky ew
+    grid .c              -row 0           -columnspan 2 -sticky nsew
+    grid $sampleRateGrid -row 0 -column 0               -sticky ew
+    grid $phaseLock      -row 0 -column 1
+    grid $oscGrid        -row 1           -columnspan 2 -sticky ew
+    grid $lfoGrid        -row 2           -columnspan 2 -sticky ew
+    grid $envADSRGrid    -row 3           -columnspan 2 -sticky ew
 }
 
 
