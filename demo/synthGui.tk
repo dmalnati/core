@@ -103,6 +103,7 @@ array set MSG_TYPE__NUMBER {
     SET_LFO_FREQUENCY 31
     SET_LFO_WAVE_TYPE 32
     SET_LFO_PHASE_OFFSET 33
+    SET_LFO_VIBRATO_PCT 34
     ENVELOPE_ENABLE 41
     ENVELOPE_DISABLE 42
 }
@@ -209,6 +210,16 @@ proc SendOscillatorPhaseOffsetChange { oscName val } {
     }
 }
 
+proc SendOscillatorVibratoPctChange { oscName val } {
+    set buf [MakeBuf]
+
+    if { $oscName == "lfo" } {
+        AppendMessageType buf SET_LFO_VIBRATO_PCT
+        AppendU8          buf $val
+        SendData $buf
+    }
+}
+
 
 
 proc SendOscillatorBalanceChange { val } {
@@ -276,6 +287,13 @@ proc OnOscillatorPhaseOffsetChange { oscName val } {
     
     SendOscillatorPhaseOffsetChange $oscName $val
 }
+
+proc OnOscillatorVibratoPctChange { oscName val } {
+    Puts "Vibrato: $oscName $val"
+    
+    SendOscillatorVibratoPctChange $oscName $val
+}
+
 
 proc OnOscillatorBalanceChange { val } {
     Puts "Oscillator balance: $val"
@@ -401,6 +419,9 @@ proc MakeOscillatorBalance { parent } {
     # Set defaults
     $this.balance set 127
     
+    # Set bindings
+    bind $this.balance <3> [list $this.balance set 127]
+    
     # Grid
     grid $this
     grid $this.label   -row 0
@@ -449,12 +470,31 @@ proc MakeOscillatorGrid { parent oscName title freqLow freqHigh freqDefault wave
     scale $this.scalePhase \
         -orient horizontal -length 200 -from -128 -to 127 \
         -command [list OnOscillatorPhaseOffsetChange $oscName]
-
+        
     # Set defaults
     $this.$waveDefault invoke
-    $this.scaleFreq set $freqDefault
-    $this.scaleFreq set 0
+    $this.scaleFreq    set $freqDefault
+    $this.scalePhase   set 0
+    
+    # Set bindings
+    bind $this.scalePhase <3> [list $this.scalePhase set 0]
+    
+    # Conditional construction
+    if { $oscName == "lfo" } {
+        # Label
+        ttk::label $this.labelVibrato -text "Vib%"
+    
+        # Vibrato selection
+        scale $this.scaleVibrato \
+            -orient horizontal -length 200 -from 0 -to 255 \
+            -command [list OnOscillatorVibratoPctChange $oscName]
+        # Set defaults
+        $this.scaleVibrato set 127
         
+        # Set bindings
+        bind $this.scaleVibrato <3> [list $this.scaleVibrato set 127]
+    }
+    
     # Grid
     grid $this
     grid $this.label      -row 0 -column 0 -columnspan 3 -sticky w
@@ -468,6 +508,13 @@ proc MakeOscillatorGrid { parent oscName title freqLow freqHigh freqDefault wave
     grid $this.scaleFreq  -row 3 -column 1 -columnspan 3
     grid $this.labelPhase -row 4 -column 0 -sticky w
     grid $this.scalePhase -row 4 -column 1 -columnspan 3
+    
+    # Conditional Grid
+    if { $oscName == "lfo" } {
+        #Grid
+        grid $this.labelVibrato -row 5 -column 0 -sticky w
+        grid $this.scaleVibrato -row 5 -column 1 -columnspan 3
+    }
  
     return $this
 }
@@ -531,7 +578,7 @@ proc SetUpGui { } {
     # Oscillator
     set phaseLock [MakePhaseLockGrid .c]
     set oscGrid   [MakeOscillatorControls .c]
-    set lfoGrid   [MakeOscillatorGrid .c lfo  "LFO" 1 100 40 none]
+    set lfoGrid   [MakeOscillatorGrid .c lfo  "LFO" 1 200 40 none]
  
     # EnvelopADSR
     set envADSRGrid [MakeEnvelopeADSR .c        \
