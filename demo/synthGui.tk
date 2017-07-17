@@ -107,6 +107,12 @@ array set MSG_TYPE__NUMBER {
     SET_LFO_TROMOLO_PCT 35
     ENVELOPE_ENABLE 41
     ENVELOPE_DISABLE 42
+    SET_ENVELOPE_ATTACK_DURATION_MS 43
+    SET_ENVELOPE_DECAY_DURATION_MS 44
+    SET_ENVELOPE_SUSTAIN_LEVEL_PCT 45
+    SET_ENVELOPE_RELEASE_DURATION_MS 46
+    SYNTHESIZER_KEY_DOWN 61
+    SYNTHESIZER_KEY_UP 62
 }
 
 proc AppendMessageType { bufName msgType } {
@@ -258,6 +264,58 @@ proc SendEnvelopeADSRDisable { } {
     SendData $buf
 }
 
+proc SendEnvelopeSetAttackDuration { val } {
+    set buf [MakeBuf]
+    
+    AppendMessageType buf SET_ENVELOPE_ATTACK_DURATION_MS
+    AppendU16         buf $val
+    
+    SendData $buf
+}
+
+proc SendEnvelopeSetDecayDuration { val } {
+    set buf [MakeBuf]
+    
+    AppendMessageType buf SET_ENVELOPE_DECAY_DURATION_MS
+    AppendU16         buf $val
+    
+    SendData $buf
+}
+
+proc SendEnvelopeSetSustainLevelPct { val } {
+    set buf [MakeBuf]
+    
+    AppendMessageType buf SET_ENVELOPE_SUSTAIN_LEVEL_PCT
+    AppendU8          buf $val
+    
+    SendData $buf
+}
+
+proc SendEnvelopeSetReleaseDuration { val } {
+    set buf [MakeBuf]
+    
+    AppendMessageType buf SET_ENVELOPE_RELEASE_DURATION_MS
+    AppendU16         buf $val
+    
+    SendData $buf
+}
+
+proc SendEnvelopePulseStart { } {
+    set buf [MakeBuf]
+    
+    AppendMessageType buf SYNTHESIZER_KEY_DOWN
+    
+    SendData $buf
+}
+
+proc SendEnvelopePulseEnd { } {
+    set buf [MakeBuf]
+    
+    AppendMessageType buf SYNTHESIZER_KEY_UP
+    
+    SendData $buf
+}
+
 
 
 ############################################################
@@ -321,6 +379,16 @@ proc OnOscillatorBalanceChange { val } {
 
 proc OnEnvelopeADSRChange { param val } {
     Puts "EnvelopADSR: $param $val"
+    
+    if { $param == "A" } {
+        SendEnvelopeSetAttackDuration $val
+    } elseif { $param == "D" } {
+        SendEnvelopeSetDecayDuration $val
+    } elseif { $param == "S" } {
+        SendEnvelopeSetSustainLevelPct $val
+    } elseif { $param == "R" } {
+        SendEnvelopeSetReleaseDuration $val
+    }
 }
 
 proc OnEnvelopeADSREnableChange { valName } {
@@ -334,6 +402,19 @@ proc OnEnvelopeADSREnableChange { valName } {
         SendEnvelopeADSRDisable
     }
 }
+
+proc OnEnvelopePulseStart { } {
+    Puts "Envelope Pulse Start"
+    
+    SendEnvelopePulseStart
+}
+    
+proc OnEnvelopePulseEnd { } {
+    Puts "Envelope Pulse Start"
+    
+    SendEnvelopePulseEnd
+}
+
 
 
 ############################################################
@@ -371,6 +452,7 @@ proc MakeEnvelopeADSR { parent
         -command [list OnEnvelopeADSRChange S]
     scale $this.scaleR -orient vertical -length 100 -from $rHigh -to $rLow \
         -command [list OnEnvelopeADSRChange R]
+    button $this.pulse -text "Pulse"
     
     # Set defaults
     $this.checkbutton invoke
@@ -378,6 +460,10 @@ proc MakeEnvelopeADSR { parent
     $this.scaleD set $dDefault
     $this.scaleS set $sDefault
     $this.scaleR set $rDefault
+    
+    # Set bindings
+    bind $this.pulse <ButtonPress-1>   [list OnEnvelopePulseStart]
+    bind $this.pulse <ButtonRelease-1> [list OnEnvelopePulseEnd]
     
     # Grid
     grid $this
@@ -393,6 +479,8 @@ proc MakeEnvelopeADSR { parent
     grid $this.scaleD -row 2 -column 1
     grid $this.scaleS -row 2 -column 2
     grid $this.scaleR -row 2 -column 3
+    
+    grid $this.pulse -row 3
  
     return $this
 }
