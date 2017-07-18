@@ -494,13 +494,56 @@ proc MakeSynthGrid { parent } {
         incr keyNum
     }
     
+    
     # Set bindings
+    global PLAY_ON_MOUSEOVER
+    set PLAY_ON_MOUSEOVER 0
+    proc OnTogglePlayOnMouseover { keyNum } {
+        global PLAY_ON_MOUSEOVER
+        
+        set PLAY_ON_MOUSEOVER [expr !$PLAY_ON_MOUSEOVER]
+        
+        if { $PLAY_ON_MOUSEOVER } {
+            OnSynthKeyDown $keyNum
+        } else {
+            OnSynthKeyUp
+        }
+    }
+    
+    proc OnMouseOver { keyNum } {
+        global PLAY_ON_MOUSEOVER
+        
+        if { $PLAY_ON_MOUSEOVER } {
+            OnSynthKeyDown $keyNum
+        }
+    }
+    
+    proc OnMouseLeave { } {
+        global PLAY_ON_MOUSEOVER
+        
+        if { $PLAY_ON_MOUSEOVER } {
+            OnSynthKeyUp
+        }
+    }
+    
+    proc OnSynthKeyUpMouseToggler { } {
+        global PLAY_ON_MOUSEOVER
+        
+        set PLAY_ON_MOUSEOVER 0
+        
+        OnSynthKeyUp
+    }
+    
     set keyNum 1
     foreach { note type } $noteTypeList {
         set buttonName "${this}.key${keyNum}"
         
         bind $buttonName <ButtonPress-1>   [list OnSynthKeyDown $keyNum]
-        bind $buttonName <ButtonRelease-1> [list OnSynthKeyUp]
+        bind $buttonName <ButtonRelease-1> [list OnSynthKeyUpMouseToggler]
+        
+        bind $buttonName <ButtonPress-3> [list OnTogglePlayOnMouseover $keyNum]
+        bind $buttonName <Enter>         [list OnMouseOver $keyNum]
+        bind $buttonName <Leave>         [list OnMouseLeave]
 
         incr keyNum
     }
