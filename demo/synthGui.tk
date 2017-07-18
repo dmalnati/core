@@ -22,9 +22,9 @@ proc Puts { str } {
 
 proc HexList { data } {
     binary scan $data H* hexStr
-    
+
     set hexStr [string toupper $hexStr]
-    
+
     set hexBuf ""
     set hexList [list]
     foreach { c } [split $hexStr {}] {
@@ -32,13 +32,13 @@ proc HexList { data } {
             append hexBuf $c
         } else {
             append hexBuf $c
-            
+
             lappend hexList $hexBuf
-            
+
             set hexBuf ""
         }
     }
-    
+
     return $hexList
 }
 
@@ -51,11 +51,11 @@ proc HexList { data } {
 
 proc SendData { data } {
     set dataLengthAsInt [binary format c [string length $data]]
-    
+
     set buf "$dataLengthAsInt$data"
-    
+
     Puts "sending [string length $data] bytes data: [HexList $data]"
-    
+
     puts -nonewline stdout $buf
     flush stdout
 }
@@ -66,19 +66,19 @@ proc MakeBuf { } {
 
 proc AppendI8 { bufName val } {
     upvar 1 $bufName buf
-    
+
     append buf [binary format c $val]
 }
 
 proc AppendU8 { bufName val } {
     upvar 1 $bufName buf
-    
+
     append buf [binary format c $val]
 }
 
 proc AppendU16 { bufName val } {
     upvar 1 $bufName buf
-    
+
     append buf [binary format S $val]
 }
 
@@ -111,21 +111,23 @@ array set MSG_TYPE__NUMBER {
     SET_ENVELOPE_DECAY_DURATION_MS 44
     SET_ENVELOPE_SUSTAIN_LEVEL_PCT 45
     SET_ENVELOPE_RELEASE_DURATION_MS 46
+    ENVELOPE_BEGIN_ATTACK 47
+    ENVELOPE_BEGIN_RELEASE 48
     SYNTHESIZER_KEY_DOWN 61
     SYNTHESIZER_KEY_UP 62
 }
 
 proc AppendMessageType { bufName msgType } {
     global MSG_TYPE__NUMBER
-    
+
     upvar 1 $bufName buf
-    
+
     set num $MSG_TYPE__NUMBER(DEFAULT)
-    
+
     if { [info exists MSG_TYPE__NUMBER($msgType)] } {
         set num $MSG_TYPE__NUMBER($msgType)
     }
-    
+
     AppendU8 buf $num
 }
 
@@ -139,19 +141,19 @@ proc AppendMessageType { bufName msgType } {
 
 proc SendPhaseLockChange { phaseLock } {
     set buf [MakeBuf]
-    
+
     AppendMessageType buf SET_PHASE_LOCK
     AppendU8          buf $phaseLock
-    
+
     SendData $buf
 }
 
 
 proc SendOscillatorWaveTypeChange { oscName wavetype } {
     set buf [MakeBuf]
-    
+
     set waveNum 1
-    
+
     if { $wavetype == "none" } {
         set waveNum 0
     } elseif { $wavetype == "sine" } {
@@ -165,7 +167,7 @@ proc SendOscillatorWaveTypeChange { oscName wavetype } {
     } elseif { $wavetype == "triangle" } {
         set waveNum 5
     }
-    
+
     if { $oscName == "osc1" } {
         AppendMessageType buf SET_OSCILLATOR_1_WAVE_TYPE
         AppendU8          buf $waveNum
@@ -241,10 +243,10 @@ proc SendOscillatorTromoloPctChange { oscName val } {
 
 proc SendOscillatorBalanceChange { val } {
     set buf [MakeBuf]
-    
+
     AppendMessageType buf SET_OSCILLATOR_BALANCE
     AppendU8          buf $val
-    
+
     SendData $buf
 }
 
@@ -253,69 +255,86 @@ proc SendEnvelopeADSREnable { } {
     set buf [MakeBuf]
 
     AppendMessageType buf ENVELOPE_ENABLE
-    
+
     SendData $buf
 }
 proc SendEnvelopeADSRDisable { } {
     set buf [MakeBuf]
 
     AppendMessageType buf ENVELOPE_DISABLE
-    
+
     SendData $buf
 }
 
 proc SendEnvelopeSetAttackDuration { val } {
     set buf [MakeBuf]
-    
+
     AppendMessageType buf SET_ENVELOPE_ATTACK_DURATION_MS
     AppendU16         buf $val
-    
+
     SendData $buf
 }
 
 proc SendEnvelopeSetDecayDuration { val } {
     set buf [MakeBuf]
-    
+
     AppendMessageType buf SET_ENVELOPE_DECAY_DURATION_MS
     AppendU16         buf $val
-    
+
     SendData $buf
 }
 
 proc SendEnvelopeSetSustainLevelPct { val } {
     set buf [MakeBuf]
-    
+
     AppendMessageType buf SET_ENVELOPE_SUSTAIN_LEVEL_PCT
     AppendU8          buf $val
-    
+
     SendData $buf
 }
 
 proc SendEnvelopeSetReleaseDuration { val } {
     set buf [MakeBuf]
-    
+
     AppendMessageType buf SET_ENVELOPE_RELEASE_DURATION_MS
     AppendU16         buf $val
-    
+
     SendData $buf
 }
 
 proc SendEnvelopePulseStart { } {
     set buf [MakeBuf]
-    
-    AppendMessageType buf SYNTHESIZER_KEY_DOWN
-    
+
+    AppendMessageType buf ENVELOPE_BEGIN_ATTACK
+
     SendData $buf
 }
 
 proc SendEnvelopePulseEnd { } {
+    set buf [MakeBuf]
+
+    AppendMessageType buf ENVELOPE_BEGIN_RELEASE
+
+    SendData $buf
+}
+
+
+proc SendSynthKeyDown { keyNum } {
+    set buf [MakeBuf]
+    
+    AppendMessageType buf SYNTHESIZER_KEY_DOWN
+    AppendU8          buf $keyNum
+    
+    SendData $buf
+}
+
+proc SendSynthKeyUp { } {
     set buf [MakeBuf]
     
     AppendMessageType buf SYNTHESIZER_KEY_UP
     
     SendData $buf
 }
-
 
 
 ############################################################
@@ -331,55 +350,55 @@ proc OnSampleRateChange { val } {
 
 proc OnPhaseLockChange { phaseLockName } {
     upvar #0 $phaseLockName phaseLock
-    
+
     Puts "PhaseLock: $phaseLock"
-    
+
     SendPhaseLockChange $phaseLock
 }
 
 proc OnOscillatorWaveTypeChange { oscName wavetypeName } {
     upvar #0 $wavetypeName wavetype
-    
+
     Puts "WaveType: $oscName $wavetype"
-    
+
     SendOscillatorWaveTypeChange $oscName $wavetype
 }
 
 proc OnOscillatorFrequencyChange { oscName val } {
     Puts "WaveFreqChange: $oscName $val"
-    
+
     SendOscillatorFrequencyChange $oscName $val
 }
 
 proc OnOscillatorPhaseOffsetChange { oscName val } {
     Puts "WaveFreqChange: $oscName $val"
-    
+
     SendOscillatorPhaseOffsetChange $oscName $val
 }
 
 proc OnOscillatorVibratoPctChange { oscName val } {
     Puts "Vibrato: $oscName $val"
-    
+
     SendOscillatorVibratoPctChange $oscName $val
 }
 
 proc OnOscillatorTromoloPctChange { oscName val } {
     Puts "Tromolo: $oscName $val"
-    
+
     SendOscillatorTromoloPctChange $oscName $val
 }
 
 
 proc OnOscillatorBalanceChange { val } {
     Puts "Oscillator balance: $val"
-    
+
     SendOscillatorBalanceChange $val
 }
 
 
 proc OnEnvelopeADSRChange { param val } {
     Puts "EnvelopADSR: $param $val"
-    
+
     if { $param == "A" } {
         SendEnvelopeSetAttackDuration $val
     } elseif { $param == "D" } {
@@ -393,9 +412,9 @@ proc OnEnvelopeADSRChange { param val } {
 
 proc OnEnvelopeADSREnableChange { valName } {
     upvar #0 $valName val
-    
+
     Puts "OnEnvelopeADSREnableChange: $val"
-    
+
     if { $val } {
         SendEnvelopeADSREnable
     } else {
@@ -405,16 +424,28 @@ proc OnEnvelopeADSREnableChange { valName } {
 
 proc OnEnvelopePulseStart { } {
     Puts "Envelope Pulse Start"
-    
+
     SendEnvelopePulseStart
 }
-    
+
 proc OnEnvelopePulseEnd { } {
     Puts "Envelope Pulse Start"
-    
+
     SendEnvelopePulseEnd
 }
 
+
+proc OnSynthKeyDown { keyNum } {
+    Puts "OnSynthKeyDown $keyNum"
+    
+    SendSynthKeyDown $keyNum
+}
+
+proc OnSynthKeyUp { } {
+    Puts "OnSynthKeyUp"
+    
+    SendSynthKeyUp
+}
 
 
 ############################################################
@@ -423,23 +454,97 @@ proc OnEnvelopePulseEnd { } {
 #
 ############################################################
 
+proc MakeSynthGrid { parent } {
+    set this ${parent}.synthKeyboard
+
+    # Create frame
+    ttk::frame $this -padding "3 3 3 3" -relief sunken
+
+    # Label it
+    ttk::label $this.label  -text "Synth Keyboard"
+
+    # Data
+    set noteTypeList {
+        "C"         white
+        "C#\n\nDb"  black
+        "D"         white
+        "D#\n\nEb"  black
+        "E\n\nFb"   white
+        "E#\n\nF"   white
+        "F#\n\nGb"  black
+        "G"         white
+        "G#\n\nAb"  black
+        "A"         white
+        "A#\n\nBb"  black
+        "B"         white
+    }
+
+    # Controls
+    set keyNum 1
+    foreach { note type } $noteTypeList {
+        set buttonName "${this}.key${keyNum}"
+        
+        set height 10
+        if { $type == "white" } {
+            set height 20
+        }
+        
+        button $buttonName -text $note -height $height -width 4
+        
+        incr keyNum
+    }
+    
+    # Set bindings
+    set keyNum 1
+    foreach { note type } $noteTypeList {
+        set buttonName "${this}.key${keyNum}"
+        
+        bind $buttonName <ButtonPress-1>   [list OnSynthKeyDown $keyNum]
+        bind $buttonName <ButtonRelease-1> [list OnSynthKeyUp]
+
+        incr keyNum
+    }
+
+    # Grid
+    grid $this
+    grid $this.label  -row 0 -column 0 -columnspan 12
+    
+    set column 0
+    set keyNum 1
+    foreach { note type } $noteTypeList {
+        set buttonName "${this}.key${keyNum}"
+        
+        set rowspan 1
+        if { $type == "white" } {
+            set rowspan 2
+        }
+        
+        grid $buttonName -row 1 -column $column -rowspan $rowspan -sticky n
+        
+        incr keyNum
+        incr column
+    }
+
+    return $this
+}
+
 proc MakeEnvelopeADSR { parent
-                        aLow aHigh aDefault 
+                        aLow aHigh aDefault
                         dLow dHigh dDefault
                         sLow sHigh sDefault
                         rLow rHigh rDefault } {
     set this ${parent}.envADSR
- 
+
     # Create frame and use it from here forward
     ttk::frame $this -padding "3 3 3 3" -relief sunken
- 
+
     # Label it
     ttk::label $this.label  -text "Envelope ADSR"
     ttk::label $this.labelA -text "A"
     ttk::label $this.labelD -text "D"
     ttk::label $this.labelS -text "S"
     ttk::label $this.labelR -text "R"
- 
+
     # Controls
     ttk::checkbutton $this.checkbutton -text "Enable" \
         -variable $this.checkbuttonVal \
@@ -453,18 +558,18 @@ proc MakeEnvelopeADSR { parent
     scale $this.scaleR -orient vertical -length 100 -from $rHigh -to $rLow \
         -command [list OnEnvelopeADSRChange R]
     button $this.pulse -text "Pulse"
-    
+
     # Set defaults
     $this.checkbutton invoke
     $this.scaleA set $aDefault
     $this.scaleD set $dDefault
     $this.scaleS set $sDefault
     $this.scaleR set $rDefault
-    
+
     # Set bindings
     bind $this.pulse <ButtonPress-1>   [list OnEnvelopePulseStart]
     bind $this.pulse <ButtonRelease-1> [list OnEnvelopePulseEnd]
-    
+
     # Grid
     grid $this
     grid $this.label  -row 0 -column 0 -columnspan 4 -sticky w
@@ -474,27 +579,27 @@ proc MakeEnvelopeADSR { parent
     grid $this.labelD -row 1 -column 1
     grid $this.labelS -row 1 -column 2
     grid $this.labelR -row 1 -column 3
- 
+
     grid $this.scaleA -row 2 -column 0
     grid $this.scaleD -row 2 -column 1
     grid $this.scaleS -row 2 -column 2
     grid $this.scaleR -row 2 -column 3
-    
+
     grid $this.pulse -row 3
- 
+
     return $this
 }
 
 
 proc MakePhaseLockGrid { parent } {
     set this ${parent}.oscPhaseLock
-    
+
     # Create frame and use it from here forward
     ttk::frame $this -padding "3 3 3 3" -relief sunken
 
     # Label it
     ttk::label $this.label  -text "Phase Lock"
-    
+
     # Controls
     ttk::checkbutton $this.phaseLock \
         -variable $this.phaseLockVal \
@@ -504,7 +609,7 @@ proc MakePhaseLockGrid { parent } {
     grid $this
     grid $this.label     -row 0
     grid $this.phaseLock -row 1
-    
+
     return $this
 }
 
@@ -516,36 +621,36 @@ proc MakeOscillatorBalance { parent } {
 
     # Label it
     ttk::label $this.label  -text "Balance"
-    
+
     # Controls
     scale $this.balance -orient vertical -length 100 -from 0 -to 255 \
         -command [list OnOscillatorBalanceChange]
-        
+
     # Set defaults
     $this.balance set 127
-    
+
     # Set bindings
     bind $this.balance <3> [list $this.balance set 127]
-    
+
     # Grid
     grid $this
     grid $this.label   -row 0
     grid $this.balance -row 1
-    
+
     return $this
 }
 
 proc MakeOscillatorGrid { parent oscName title freqLow freqHigh freqDefault waveDefault } {
     set this ${parent}.${oscName}
- 
+
     # Create frame and use it from here forward
     ttk::frame $this -padding "3 3 3 3" -relief sunken
- 
+
     # Label it
     ttk::label $this.label      -text $title
     ttk::label $this.labelFreq  -text "Freq"
     ttk::label $this.labelPhase -text "Phase"
- 
+
     # Add radiobuttons
     ttk::radiobutton $this.sine \
         -value sine -text sine -variable $this.wavetype \
@@ -565,31 +670,31 @@ proc MakeOscillatorGrid { parent oscName title freqLow freqHigh freqDefault wave
     ttk::radiobutton $this.none \
         -value none -text none -variable $this.wavetype \
         -command [list OnOscillatorWaveTypeChange $oscName $this.wavetype]
-        
+
     # Frequency selection
     scale $this.scaleFreq \
         -orient horizontal -length 200 -from $freqLow -to $freqHigh \
         -command [list OnOscillatorFrequencyChange $oscName]
-        
+
     # Phase selection
     scale $this.scalePhase \
         -orient horizontal -length 200 -from -128 -to 127 \
         -command [list OnOscillatorPhaseOffsetChange $oscName]
-        
+
     # Set defaults
     $this.$waveDefault invoke
     $this.scaleFreq    set $freqDefault
     $this.scalePhase   set 0
-    
+
     # Set bindings
     bind $this.scalePhase <3> [list $this.scalePhase set 0]
-    
+
     # Conditional construction
     if { $oscName == "lfo" } {
         # Label
         ttk::label $this.labelVibrato -text "Vib%"
         ttk::label $this.labelTromolo -text "Tro%"
-    
+
         # Vibrato selection
         scale $this.scaleVibrato \
             -orient horizontal -length 200 -from 0 -to 255 \
@@ -597,16 +702,16 @@ proc MakeOscillatorGrid { parent oscName title freqLow freqHigh freqDefault wave
         scale $this.scaleTromolo \
             -orient horizontal -length 200 -from 0 -to 255 \
             -command [list OnOscillatorTromoloPctChange $oscName]
-        
+
         # Set defaults
         $this.scaleVibrato set 127
         $this.scaleTromolo set 127
-        
+
         # Set bindings
         bind $this.scaleVibrato <3> [list $this.scaleVibrato set 127]
         bind $this.scaleTromolo <3> [list $this.scaleTromolo set 127]
     }
-    
+
     # Grid
     grid $this
     grid $this.label      -row 0 -column 0 -columnspan 3 -sticky w
@@ -620,49 +725,49 @@ proc MakeOscillatorGrid { parent oscName title freqLow freqHigh freqDefault wave
     grid $this.scaleFreq  -row 3 -column 1 -columnspan 3
     grid $this.labelPhase -row 4 -column 0 -sticky w
     grid $this.scalePhase -row 4 -column 1 -columnspan 3
-    
+
     # Conditional Grid
     if { $oscName == "lfo" } {
         #Grid
         grid $this.labelVibrato -row 5 -column 0 -sticky w
         grid $this.scaleVibrato -row 5 -column 1 -columnspan 3
-        
+
         grid $this.labelTromolo -row 6 -column 0 -sticky w
         grid $this.scaleTromolo -row 6 -column 1 -columnspan 3
     }
- 
+
     return $this
 }
 
 proc MakeOscillatorControls { parent } {
     set this ${parent}.oscContainer
- 
+
     # Create frame and use it from here forward
     ttk::frame $this -padding "3 3 3 3" -relief sunken
- 
+
     set osc1Grid [MakeOscillatorGrid $this osc1 "Oscillator 1" 1 1500 200 sine]
     set osc2Grid [MakeOscillatorGrid $this osc2 "Oscillator 2" 1 1500 210 none]
     set oscBal   [MakeOscillatorBalance $this]
- 
+
     # Grid
     grid $this
     grid $osc1Grid -row 0 -column 0
     grid $osc2Grid -row 1 -column 0
     grid $oscBal   -row 0 -column 1 -rowspan 2 ;#-sticky ns
-    
+
     return $this
 }
 
 
 proc MakeSampleRateGrid { parent freqLow freqHigh freqDefault } {
     set this $parent.sampleRate
- 
+
     # Create frame and use it from here forward
     ttk::frame $this -padding "3 3 3 3" -relief sunken
- 
+
     # Label it
     ttk::label $this.label -text "Sample Rate"
- 
+
     # Get slider
     scale $this.scale \
         -orient horizontal -length 200 -from $freqLow -to $freqHigh \
@@ -670,12 +775,12 @@ proc MakeSampleRateGrid { parent freqLow freqHigh freqDefault } {
 
     # Set defaults
     $this.scale set $freqDefault
- 
+
     # Grid
     grid $this
     grid $this.label -row 0 -sticky w
     grid $this.scale -row 1 -sticky w
- 
+
     return $this
 }
 
@@ -683,25 +788,28 @@ proc MakeSampleRateGrid { parent freqLow freqHigh freqDefault } {
 proc SetUpGui { } {
     # Title
     wm title . "Synth Control"
- 
+
     # Root frame
     ttk::frame .c -padding "3 3 3 3"
- 
+
     # Sample Rate
     set sampleRateGrid [MakeSampleRateGrid .c 10000 20000 12000]
- 
+
     # Oscillator
     set phaseLock [MakePhaseLockGrid .c]
     set oscGrid   [MakeOscillatorControls .c]
     set lfoGrid   [MakeOscillatorGrid .c lfo  "LFO" 1 200 40 none]
- 
+
     # EnvelopADSR
     set envADSRGrid [MakeEnvelopeADSR .c        \
                                       1 500  50 \
                                       1 500 100 \
                                       1 100  50 \
                                       1 500  20]
- 
+
+    # Synthesizer
+    set synthGrid [MakeSynthGrid .c]
+
     # Pack it all in
     grid .c              -row 0           -columnspan 2 -sticky nsew
     grid $sampleRateGrid -row 0 -column 0               -sticky ew
@@ -709,6 +817,8 @@ proc SetUpGui { } {
     grid $oscGrid        -row 1           -columnspan 2 -sticky ew
     grid $lfoGrid        -row 2           -columnspan 2 -sticky ew
     grid $envADSRGrid    -row 3           -columnspan 2 -sticky ew
+
+    grid $synthGrid      -row 0 -column 2 -rowspan 4 -sticky ns
 }
 
 
@@ -722,7 +832,7 @@ proc SetUpGui { } {
 proc Init { } {
     fconfigure stdout -translation binary
 }
- 
+
 proc Main { } {
     global argc
     global argv
@@ -731,7 +841,7 @@ proc Main { } {
     Init
     SetUpGui
 }
- 
+
 Main
 
 
