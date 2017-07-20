@@ -105,16 +105,14 @@ array set MSG_TYPE__NUMBER {
     SET_LFO_PHASE_OFFSET 33
     SET_LFO_VIBRATO_PCT 34
     SET_LFO_TROMOLO_PCT 35
-    ENVELOPE_ENABLE 41
-    ENVELOPE_DISABLE 42
+    SET_ENVELOPE_ON_OFF 41
     SET_ENVELOPE_ATTACK_DURATION_MS 43
     SET_ENVELOPE_DECAY_DURATION_MS 44
     SET_ENVELOPE_SUSTAIN_LEVEL_PCT 45
     SET_ENVELOPE_RELEASE_DURATION_MS 46
-    ENVELOPE_BEGIN_ATTACK 47
-    ENVELOPE_BEGIN_RELEASE 48
-    SYNTHESIZER_KEY_DOWN 61
-    SYNTHESIZER_KEY_UP 62
+    FN_SYNTHESIZER_KEY_DOWN 61
+    FN_SYNTHESIZER_KEY_DOWN_NOTE 62
+    FN_SYNTHESIZER_KEY_UP 63
 }
 
 proc AppendMessageType { bufName msgType } {
@@ -254,14 +252,16 @@ proc SendOscillatorBalanceChange { val } {
 proc SendEnvelopeADSREnable { } {
     set buf [MakeBuf]
 
-    AppendMessageType buf ENVELOPE_ENABLE
+    AppendMessageType buf SET_ENVELOPE_ON_OFF
+    AppendU8          buf 1
 
     SendData $buf
 }
 proc SendEnvelopeADSRDisable { } {
     set buf [MakeBuf]
 
-    AppendMessageType buf ENVELOPE_DISABLE
+    AppendMessageType buf SET_ENVELOPE_ON_OFF
+    AppendU8          buf 0
 
     SendData $buf
 }
@@ -305,7 +305,7 @@ proc SendEnvelopeSetReleaseDuration { val } {
 proc SendEnvelopePulseStart { } {
     set buf [MakeBuf]
 
-    AppendMessageType buf ENVELOPE_BEGIN_ATTACK
+    AppendMessageType buf FN_SYNTHESIZER_KEY_DOWN
 
     SendData $buf
 }
@@ -313,7 +313,7 @@ proc SendEnvelopePulseStart { } {
 proc SendEnvelopePulseEnd { } {
     set buf [MakeBuf]
 
-    AppendMessageType buf ENVELOPE_BEGIN_RELEASE
+    AppendMessageType buf FN_SYNTHESIZER_KEY_UP
 
     SendData $buf
 }
@@ -322,7 +322,7 @@ proc SendEnvelopePulseEnd { } {
 proc SendSynthKeyDown { keyNum } {
     set buf [MakeBuf]
     
-    AppendMessageType buf SYNTHESIZER_KEY_DOWN
+    AppendMessageType buf FN_SYNTHESIZER_KEY_DOWN_NOTE
     AppendU8          buf $keyNum
     
     SendData $buf
@@ -331,7 +331,7 @@ proc SendSynthKeyDown { keyNum } {
 proc SendSynthKeyUp { } {
     set buf [MakeBuf]
     
-    AppendMessageType buf SYNTHESIZER_KEY_UP
+    AppendMessageType buf FN_SYNTHESIZER_KEY_UP
     
     SendData $buf
 }
@@ -788,8 +788,8 @@ proc MakeOscillatorControls { parent } {
     # Create frame and use it from here forward
     ttk::frame $this -padding "3 3 3 3" -relief sunken
 
-    set osc1Grid [MakeOscillatorGrid $this osc1 "Oscillator 1" 1 1500 200 sine]
-    set osc2Grid [MakeOscillatorGrid $this osc2 "Oscillator 2" 1 1500 210 none]
+    set osc1Grid [MakeOscillatorGrid $this osc1 "Oscillator 1" 1 1500 400 sine]
+    set osc2Grid [MakeOscillatorGrid $this osc2 "Oscillator 2" 1 1500 402 none]
     set oscBal   [MakeOscillatorBalance $this]
 
     # Grid
@@ -844,11 +844,11 @@ proc SetUpGui { } {
     set lfoGrid   [MakeOscillatorGrid .c lfo  "LFO" 1 200 40 none]
 
     # EnvelopADSR
-    set envADSRGrid [MakeEnvelopeADSR .c        \
-                                      1 500  50 \
-                                      1 500 100 \
-                                      1 100  50 \
-                                      1 500  20]
+    set envADSRGrid [MakeEnvelopeADSR .c          \
+                                      1 1000   50 \
+                                      1 1000  100 \
+                                      1 100    50 \
+                                      1 1000  200]
 
     # Synthesizer
     set synthGrid [MakeSynthGrid .c]
