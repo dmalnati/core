@@ -113,6 +113,7 @@ array set MSG_TYPE__NUMBER {
     FN_SYNTHESIZER_KEY_DOWN 61
     FN_SYNTHESIZER_KEY_DOWN_NOTE 62
     FN_SYNTHESIZER_KEY_UP 63
+    FN_SYNTHESIZER_CYCLE_TO_NEXT_INSTRUMENT 64
 }
 
 proc AppendMessageType { bufName msgType } {
@@ -336,6 +337,14 @@ proc SendSynthKeyUp { } {
     SendData $buf
 }
 
+proc SendSynthCycleInstrument { } {
+    set buf [MakeBuf]
+    
+    AppendMessageType buf FN_SYNTHESIZER_CYCLE_TO_NEXT_INSTRUMENT
+    
+    SendData $buf
+}
+
 
 ############################################################
 #
@@ -447,6 +456,12 @@ proc OnSynthKeyUp { } {
     SendSynthKeyUp
 }
 
+proc OnSynthCycleInstrument { } {
+    Puts "OnSynthCycleInstrument"
+    
+    SendSynthCycleInstrument
+}
+
 
 ############################################################
 #
@@ -493,7 +508,7 @@ proc MakeSynthGrid { parent } {
         
         incr keyNum
     }
-    
+    button $this.cycleInstrument -text "Next Instrument"
     
     # Set bindings
     global PLAY_ON_MOUSEOVER
@@ -547,10 +562,12 @@ proc MakeSynthGrid { parent } {
 
         incr keyNum
     }
+    bind $this.cycleInstrument <ButtonPress-1> [list OnSynthCycleInstrument]
 
     # Grid
     grid $this
-    grid $this.label  -row 0 -column 0 -columnspan 12
+    grid $this.label           -row 0 -column 0 -columnspan 12 -sticky w
+    grid $this.cycleInstrument -row 0 -column 4 -columnspan 12 -sticky w
     
     set column 0
     set keyNum 1
