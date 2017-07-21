@@ -54,7 +54,7 @@ proc SendData { data } {
 
     set buf "$dataLengthAsInt$data"
 
-    Puts "sending [string length $data] bytes data: [HexList $data]"
+    #Puts "sending [string length $data] bytes data: [HexList $data]"
 
     puts -nonewline stdout $buf
     flush stdout
@@ -110,6 +110,7 @@ array set MSG_TYPE__NUMBER {
     SET_ENVELOPE_DECAY_DURATION_MS 44
     SET_ENVELOPE_SUSTAIN_LEVEL_PCT 45
     SET_ENVELOPE_RELEASE_DURATION_MS 46
+    SET_OCTAVE 51
     FN_SYNTHESIZER_KEY_DOWN 61
     FN_SYNTHESIZER_KEY_DOWN_NOTE 62
     FN_SYNTHESIZER_KEY_UP 63
@@ -345,6 +346,15 @@ proc SendSynthCycleInstrument { } {
     SendData $buf
 }
 
+proc SendSynthSetOctave { val } {
+    set buf [MakeBuf]
+    
+    AppendMessageType buf SET_OCTAVE
+    AppendU8          buf $val
+    
+    SendData $buf
+}
+
 
 ############################################################
 #
@@ -438,7 +448,7 @@ proc OnEnvelopePulseStart { } {
 }
 
 proc OnEnvelopePulseEnd { } {
-    Puts "Envelope Pulse Start"
+    Puts "Envelope Pulse End"
 
     SendEnvelopePulseEnd
 }
@@ -462,6 +472,30 @@ proc OnSynthCycleInstrument { } {
     SendSynthCycleInstrument
 }
 
+set OCTAVE 4
+proc OnSynthOctaveDown { } {
+    global OCTAVE
+    
+    incr OCTAVE -1
+    
+    OnSynthSetOctave $OCTAVE
+}
+
+proc OnSynthOctaveUp { } {
+    global OCTAVE
+    
+    incr OCTAVE
+    
+    OnSynthSetOctave $OCTAVE
+}
+
+proc OnSynthSetOctave { val } {
+    Puts "OnSynthSetOctave: $val"
+    
+    SendSynthSetOctave $val
+}
+
+
 
 ############################################################
 #
@@ -476,7 +510,8 @@ proc MakeSynthGrid { parent } {
     ttk::frame $this -padding "3 3 3 3" -relief sunken
 
     # Label it
-    ttk::label $this.label  -text "Synth Keyboard"
+    ttk::label $this.label     -text "Synth Keyboard"
+    ttk::label $this.octaveStr -text "" -textvariable OCTAVE
 
     # Data
     set noteTypeList {
@@ -509,6 +544,12 @@ proc MakeSynthGrid { parent } {
         incr keyNum
     }
     button $this.cycleInstrument -text "Next Instrument"
+    button $this.octaveDown      -text "Octave Down"
+    button $this.octaveUp        -text "Octave Up"
+    
+    # Defaults
+    global OCTAVE
+    OnSynthSetOctave $OCTAVE
     
     # Set bindings
     global PLAY_ON_MOUSEOVER
@@ -563,11 +604,16 @@ proc MakeSynthGrid { parent } {
         incr keyNum
     }
     bind $this.cycleInstrument <ButtonPress-1> [list OnSynthCycleInstrument]
+    bind $this.octaveDown      <ButtonPress-1> [list OnSynthOctaveDown]
+    bind $this.octaveUp        <ButtonPress-1> [list OnSynthOctaveUp]
 
     # Grid
     grid $this
     grid $this.label           -row 0 -column 0 -columnspan 12 -sticky w
-    grid $this.cycleInstrument -row 0 -column 4 -columnspan 12 -sticky w
+    grid $this.cycleInstrument -row 0 -column 3 -columnspan  6 -sticky w
+    grid $this.octaveDown      -row 0 -column 6 -columnspan  6 -sticky w
+    grid $this.octaveStr       -row 0 -column 8 -columnspan  6 -sticky w
+    grid $this.octaveUp        -row 0 -column 9 -columnspan  6 -sticky w
     
     set column 0
     set keyNum 1
