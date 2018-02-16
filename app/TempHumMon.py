@@ -85,7 +85,10 @@ def Main():
 
 
 
-Main()
+try:
+    Main()
+except KeyboardInterrupt:
+    pass
 
 
 
