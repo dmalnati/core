@@ -75,7 +75,7 @@ def Main():
             tempF = GetTemperatureF()
             hum   = GetHumidity()
 
-            print "temp: %s, hum: %s" % (tempF, hum)
+            #print "temp: %s, hum: %s" % (tempF, hum)
 
             UpdateThingsboard(tempF, hum)
         except:
