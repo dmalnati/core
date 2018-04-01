@@ -240,6 +240,9 @@ class App:
         if verbose:
             print "Stopping"
 
+        # Shut off pump
+        self.pump.SetPwmPct(0)
+
         # Cancel timers
         if (self.timerHandleTimeLimit):
             evm_CancelTimeout(self.timerHandleTimeLimit)
