@@ -25,8 +25,8 @@ class BMP280():
     def GetTempF(self):
         return self.tempF
 
-    def GetPressure(self):
-        return self.pressure
+    def GetPressureHPa(self):
+        return self.pressureHPa
 
     def TakeMeasurement(self):
         # BMP280 address, 0x76(118)
@@ -116,9 +116,9 @@ class BMP280():
         pressure = (p + (var1 + var2 + (dig_P7)) / 16.0) / 100
 
         # store calculated values in class members
-        self.tempC    = cTemp
-        self.tempF    = fTemp
-        self.pressure = pressure
+        self.tempC       = cTemp
+        self.tempF       = fTemp
+        self.pressureHPa = pressure
 
 
 
