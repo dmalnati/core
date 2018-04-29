@@ -25,25 +25,39 @@ def GroupArgs(argv):
     return (argList, flagList)
 
 
+FLAG_NNL  = False
 FLAG_NTOR = False
 def ProcessFlags(flagList):
+    global FLAG_NNL
     global FLAG_NTOR
 
     for flag in flagList:
-        if flag == "-ntor":
+        if flag == "-nnl":
+            FLAG_NNL = True
+        elif flag == "-ntor":
             FLAG_NTOR = True
 
 def PreprocessInput(byteList):
+    global FLAG_NNL
     global FLAG_NTOR
 
     byteListNew = bytearray()
 
+    useByte = True
+
     for byte in byteList:
+        useByte = True
+
+        if FLAG_NNL:
+            if byte == "\n":
+                useByte = False
+
         if FLAG_NTOR:
             if byte == "\n":
                 byte = "\r"
-        
-        byteListNew.extend(byte)
+
+        if useByte:
+            byteListNew.extend(byte)
 
     return byteListNew
 
@@ -59,6 +73,7 @@ def Main():
               " <bcPinRx> [<bcPinTx=->] [<baud=9600>] [-ntor]")
         print("    bcPinRx can be - if not in use (write only)")
         print("    bcPinTx can be - if not in use (read only)")
+        print("    use -nnl flag to strip off trailing \\n")
         print("    use -ntor flag to convert \\n to \\r")
         sys.exit(-1)
 
@@ -88,7 +103,9 @@ def Main():
 
     def OnKeyboardReadable(byteList):
         byteList = PreprocessInput(byteList)
-        ser.Send(byteList)
+
+        if len(byteList):
+            ser.Send(byteList)
 
     # register callbacks
     ser.SetCbOnRxAvailable(OnSerialReadable)
