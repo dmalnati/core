@@ -1,0 +1,162 @@
+<html>
+    <head>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+        <script>
+function OnLoad()
+{
+    // just a bit of testing -- works
+    console.log(GetBaseURL());
+    console.log(GetGetURL("getNameVal"));
+    console.log(GetSetURL("setNameVal", "setValueVal"));
+
+    // setup
+    GetAndSetCheckbox("CB_AC1");
+    GetAndSetCheckbox("CB_AC2");
+}
+
+
+function GetBaseURL()
+{
+    let url = window.location.href
+    let arr = url.split("/");
+    let result = arr[0] + "//" + arr[2]
+
+    return result;
+}
+
+function GetGetURL(getName)
+{
+    return GetBaseURL() + "/" + "get/?name=" + getName;
+}
+
+function GetSetURL(setName, setValue)
+{
+    return GetBaseURL() + "/" + "set/?name=" + setName + "&value=" + setValue;
+}
+
+//
+// cb - callback: fn(ok, onOffStatus)
+//
+function GetDeviceOnOffStatus(deviceName, cb)
+{
+    let url = GetGetURL(deviceName);
+
+    $.ajax({
+        url: url,
+        success: function(result, status, xhr) { cb(1, parseInt(result)); },
+        error:   function(xhr, status, error)  { cb(0, 0);     }
+    });
+}
+
+//
+// cb - callback: fn(ok)
+//
+function SetDeviceOnOffStatus(deviceName, deviceValue, cb)
+{
+    let url = GetSetURL(deviceName, deviceValue);
+
+    $.ajax({
+        url: url,
+        success: function(result, status, xhr) { cb(1); },
+        error:   function(xhr, status, error)  { cb(0); }
+    });
+}
+
+function GetAndSetCheckbox(id)
+{
+    let domEl = document.getElementById(id);
+
+    if (domEl)
+    {
+        // grey out
+        domEl.disabled = true;
+
+        let deviceName = domEl.getAttribute("data-device-name");
+
+        GetDeviceOnOffStatus(deviceName, function(ok, onOffStatus) {
+            if (ok)
+            {
+                console.log(deviceName + " = " + onOffStatus);
+
+                if (onOffStatus)
+                {
+                    domEl.checked = true;
+                }
+                else
+                {
+                    domEl.checked = false;
+                }
+            }
+            else
+            {
+                console.log("Could not get status for " + deviceName);
+            }
+
+            // re-enable
+            domEl.disabled = false;
+        });
+    }
+}
+
+function ToggleCheckbox(domEl)
+{
+    // grey out
+    domEl.disabled = true;
+
+    let deviceName  = domEl.getAttribute("data-device-name");
+    // value will have already been changed on the page, but we want to
+    // actually set it on the server-side, so look at its current value to
+    // know what to try to set it to
+    let deviceValue = domEl.checked ? 1 : 0;
+
+    console.log("reading checked = " + domEl.checked);
+    console.log("setting deviceValue = " + deviceValue);
+
+    SetDeviceOnOffStatus(deviceName, deviceValue, function(ok) {
+        GetAndSetCheckbox(domEl.id);
+
+        // re-enable
+        domEl.disabled = false;
+    });
+
+    return false;
+}
+
+
+
+        </script>
+    </head>
+
+    <body onload='OnLoad();'>
+<div>
+AC1 - <input type='checkbox'
+             id='CB_AC1'
+             onclick='ToggleCheckbox(this)'
+             data-device-name='AC1'
+             disabled>
+</div>
+
+<div>
+AC2 - <input type='checkbox'
+             id='CB_AC2'
+             onclick='ToggleCheckbox(this)'
+             data-device-name='AC2'
+             disabled>
+</div>
+
+    </body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
