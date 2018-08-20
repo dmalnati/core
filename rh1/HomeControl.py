@@ -4,14 +4,26 @@ import os
 import sys
 import time
 
+import pigpio
+
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', ''))
 from myLib.app import *
 
 
 class MyApp(WebApplicationBase):
     def Start(self):
+        self.PIN_AC1 = 20
+        self.PIN_AC2 = 21
 
-        self.AC1 = 1
+        self.pig = pigpio.pi()
+
+        self.pig.set_mode(self.PIN_AC1, pigpio.OUTPUT)
+        self.pig.set_mode(self.PIN_AC2, pigpio.OUTPUT)
+
+        self.pig.write(self.PIN_AC1, 0)
+        self.pig.write(self.PIN_AC2, 0)
+
+        self.AC1 = 0
         self.AC2 = 0
 
         Log("Starting")
@@ -38,9 +50,10 @@ class MyApp(WebApplicationBase):
 
         if name == "AC1":
             self.AC1 = value
+            self.pig.write(self.PIN_AC1, int(value))
         elif name == "AC2":
             self.AC2 = value
-
+            self.pig.write(self.PIN_AC2, int(value))
 
 
 def Main():
