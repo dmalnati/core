@@ -1,0 +1,10 @@
+{
+    "name": "RH1",
+    "icons": [{
+            "src": "./img/icon_192_android.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        }],
+    "display": "fullscreen",
+    "orientation": "portrait"
+}
