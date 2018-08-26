@@ -6,8 +6,24 @@
 function OnLoad()
 {
     // setup
-    GetAndSetCheckbox("CB_AC1");
-    GetAndSetCheckbox("CB_AC2");
+    UpdatePageState();
+
+    //setTimeout(UpdatePageState, 1000);
+    //UpdatePageState();
+}
+
+function UpdatePageState()
+{
+    // purposefully sequential async
+    new Promise(function(resolve, reject) {
+        GetAndSetCheckbox("CB_AC1", function() { resolve(); });
+    }).then(function(data) {
+        return new Promise(function(resolve, reject) {
+            GetAndSetCheckbox("CB_AC2", function() { resolve(); });
+        });
+    }).then(function(data) {
+        setTimeout(UpdatePageState, 5000);
+    });
 }
 
 
@@ -58,21 +74,21 @@ function SetDeviceOnOffStatus(deviceName, deviceValue, cb)
     });
 }
 
-function GetAndSetCheckbox(id)
+function GetAndSetCheckbox(id, cb = function(){})
 {
     let domEl = document.getElementById(id);
 
     if (domEl)
     {
         // grey out
-        domEl.disabled = true;
+        //domEl.disabled = true;
 
         let deviceName = domEl.getAttribute("data-device-name");
 
         GetDeviceOnOffStatus(deviceName, function(ok, onOffStatus) {
             if (ok)
             {
-                console.log(deviceName + " = " + onOffStatus);
+                //console.log(deviceName + " = " + onOffStatus);
 
                 if (onOffStatus)
                 {
@@ -82,14 +98,20 @@ function GetAndSetCheckbox(id)
                 {
                     domEl.checked = false;
                 }
+
+                domEl.disabled = false;
             }
             else
             {
                 console.log("Could not get status for " + deviceName);
+                domEl.disabled = true;
             }
 
             // re-enable
-            domEl.disabled = false;
+            //domEl.disabled = false;
+
+            // indicate operation complete
+            cb();
         });
     }
 }
@@ -97,7 +119,7 @@ function GetAndSetCheckbox(id)
 function ToggleCheckbox(domEl)
 {
     // grey out
-    domEl.disabled = true;
+    //domEl.disabled = true;
 
     let deviceName  = domEl.getAttribute("data-device-name");
     // value will have already been changed on the page, but we want to
@@ -105,14 +127,14 @@ function ToggleCheckbox(domEl)
     // know what to try to set it to
     let deviceValue = domEl.checked ? 1 : 0;
 
-    console.log("reading checked = " + domEl.checked);
-    console.log("setting deviceValue = " + deviceValue);
+    //console.log("reading checked = " + domEl.checked);
+    console.log("setting " + deviceName + " = " + deviceValue);
 
     SetDeviceOnOffStatus(deviceName, deviceValue, function(ok) {
         GetAndSetCheckbox(domEl.id);
 
         // re-enable
-        domEl.disabled = false;
+        //domEl.disabled = false;
     });
 
     return false;
@@ -128,16 +150,14 @@ function ToggleCheckbox(domEl)
 AC1 - <input type='checkbox'
              id='CB_AC1'
              onclick='ToggleCheckbox(this)'
-             data-device-name='AC1'
-             disabled>
+             data-device-name='AC1'>
 </div>
 
 <div>
 AC2 - <input type='checkbox'
              id='CB_AC2'
              onclick='ToggleCheckbox(this)'
-             data-device-name='AC2'
-             disabled>
+             data-device-name='AC2'>
 </div>
 
     </body>

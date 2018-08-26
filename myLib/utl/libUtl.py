@@ -108,8 +108,29 @@ def WatchStdinEndLoopOnEOF(cbFn, binary=False):
 def TimeNow():
     return datetime.datetime.now().time().isoformat()
 
+
+logDateAlso = False
+
+def LogIncludeDate(yesNo):
+    global logDateAlso
+
+    logDateAlso = yesNo
+
 def Log(msg):
-    print("[" + str(TimeNow()) + "]: " + msg)
+    global logDateAlso
+
+    logStr = ""
+    logStr += "["
+
+    if logDateAlso:
+        logStr += datetime.datetime.today().strftime('%Y-%m-%d')
+        logStr += " "
+
+    logStr += str(TimeNow())
+    logStr += "]: "
+    logStr += msg
+
+    print(logStr)
 
 
 def GetPrettyJSON(jsonObj):

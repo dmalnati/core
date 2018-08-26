@@ -36,6 +36,9 @@ class ApplicationBase(ApplicationInterface):
  
         # replace start function with interceptor
         self.Start = self.PrivateStart
+
+        # Allow application to be non-interactive
+        self.enableKeyboardInput = kwargs.get("enableKeyboardInput", True)
  
     # Step in between the base class and actual Start.
     def PrivateStart(self, *args, **kwargs):
@@ -51,7 +54,10 @@ class ApplicationBase(ApplicationInterface):
             self.PrivateStartCaptured(*args)
  
         # Set up keyboard handler
-        WatchStdinEndLoopOnEOF(self.OnKeyboardInput)
+
+        if self.enableKeyboardInput:
+            print("running it")
+            WatchStdinEndLoopOnEOF(self.OnKeyboardInput)
  
         # Run main loop
         evm_MainLoop()
