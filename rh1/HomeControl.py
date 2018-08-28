@@ -12,16 +12,26 @@ from myLib.app import *
 
 class MyApp(WebApplicationBase):
     def Start(self):
-        self.PIN_AC1 = 20
-        self.PIN_AC2 = 21
+        self.service__pin = {
+            # Air Conditioners
+            "AC1" : 20,
+            "AC2" : 21,
+            # Power Strip
+            "PS1" : 2,
+            "PS2" : 3,
+            "PS3" : 4,
+            "PS4" : 17,
+            "PS5" : 27,
+            "PS6" : 22,
+        }
 
         self.pig = pigpio.pi()
 
-        self.pig.set_mode(self.PIN_AC1, pigpio.OUTPUT)
-        self.pig.set_mode(self.PIN_AC2, pigpio.OUTPUT)
-
-        self.pig.write(self.PIN_AC1, 0)
-        self.pig.write(self.PIN_AC2, 0)
+        for service in sorted(self.service__pin.keys()):
+            pin = self.service__pin[service]
+            Log("Setting " + service + "(pin " + str(pin) + ") to LOW")
+            self.pig.set_mode(pin, pigpio.OUTPUT)
+            self.pig.write(pin, 0)
 
         Log("Starting")
 
@@ -33,10 +43,9 @@ class MyApp(WebApplicationBase):
 
         #Log("MyApp:OnInternetGet: " + name)
 
-        if name == "AC1":
-            retVal = self.pig.read(self.PIN_AC1)
-        elif name == "AC2":
-            retVal = self.pig.read(self.PIN_AC2)
+        if name in self.service__pin:
+            pin = self.service__pin[name]
+            retVal = self.pig.read(pin)
 
         #Log("  returning: " + str(retVal))
 
@@ -45,10 +54,9 @@ class MyApp(WebApplicationBase):
     def OnInternetSet(self, name, value):
         Log("MyApp:OnInternetSet: " + name + " = " + str(value))
 
-        if name == "AC1":
-            self.pig.write(self.PIN_AC1, int(value))
-        elif name == "AC2":
-            self.pig.write(self.PIN_AC2, int(value))
+        if name in self.service__pin:
+            pin = self.service__pin[name]
+            self.pig.write(pin, int(value))
 
 
 def Main():

@@ -26,6 +26,18 @@ function UpdatePageState()
             GetAndSetCheckbox("CB_AC2", function() { resolve(); });
         });
     }).then(function(data) {
+        return new Promise(function(resolve, reject) {
+            GetAndSetCheckbox("CB_PS1", function() { resolve(); });
+        });
+    }).then(function(data) {
+        return new Promise(function(resolve, reject) {
+            GetAndSetCheckbox("CB_PS2", function() { resolve(); });
+        });
+    }).then(function(data) {
+        return new Promise(function(resolve, reject) {
+            GetAndSetCheckbox("CB_PS4", function() { resolve(); });
+        });
+    }).then(function(data) {
         setTimeout(UpdatePageState, 5000);
     });
 }
@@ -151,18 +163,43 @@ function ToggleCheckbox(domEl)
 
     <body onload='OnLoad();'>
 <div>
-AC1 - <input type='checkbox'
-             id='CB_AC1'
-             onclick='ToggleCheckbox(this)'
-             data-device-name='AC1'>
+AC1: <input type='checkbox'
+            id='CB_AC1'
+            onclick='ToggleCheckbox(this)'
+            data-device-name='AC1'>
 </div>
 
 <div>
-AC2 - <input type='checkbox'
-             id='CB_AC2'
-             onclick='ToggleCheckbox(this)'
-             data-device-name='AC2'>
+AC2: <input type='checkbox'
+            id='CB_AC2'
+            onclick='ToggleCheckbox(this)'
+            data-device-name='AC2'>
 </div>
+
+<br/>
+Lamps:
+<table>
+    <tr>
+        <td>
+            <input type='checkbox'
+                   id='CB_PS1'
+                   onclick='ToggleCheckbox(this)'
+                   data-device-name='PS1'>
+        </td>
+        <td>
+            <input type='checkbox'
+                   id='CB_PS2'
+                   onclick='ToggleCheckbox(this)'
+                   data-device-name='PS2'>
+        </td>
+        <td>
+            <input type='checkbox'
+                   id='CB_PS4'
+                   onclick='ToggleCheckbox(this)'
+                   data-device-name='PS4'>
+        </td>
+    </tr>
+</table>
 
     </body>
 </html>
