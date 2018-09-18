@@ -4,6 +4,13 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
         <link rel="manifest" href="manifest.json">
 
+        <style>
+body {
+    background-color: black;
+    color: white;
+}
+        </style>
+
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 
         <script>
@@ -11,9 +18,32 @@ function OnLoad()
 {
     // setup
     UpdatePageState();
+}
 
-    //setTimeout(UpdatePageState, 1000);
-    //UpdatePageState();
+function ToggleAllLamps()
+{
+    let cb1 = document.getElementById("CB_PS1");
+    let cb2 = document.getElementById("CB_PS2");
+    let cb4 = document.getElementById("CB_PS4");
+
+    let c1 = cb1.checked;
+    let c2 = cb2.checked;
+    let c4 = cb4.checked;
+
+    // if any are checked, then shut them all off.
+    // if all are unchecked, turn them all on.
+    if (c1 || c2 || c4)
+    {
+        if (c1) { cb1.click(); }
+        if (c2) { cb2.click(); }
+        if (c4) { cb4.click(); }
+    }
+    else
+    {
+        cb1.click();
+        cb2.click();
+        cb4.click();
+    }
 }
 
 function UpdatePageState()
@@ -177,7 +207,9 @@ AC2: <input type='checkbox'
 </div>
 
 <br/>
+<div style='user-select: none;' onclick='ToggleAllLamps();'>
 Lamps:
+</div>
 <table>
     <tr>
         <td>
