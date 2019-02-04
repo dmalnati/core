@@ -27,15 +27,59 @@ def GroupArgs(argv):
 
 FLAG_NNL  = False
 FLAG_NTOR = False
+FLAG_TS   = False
 def ProcessFlags(flagList):
     global FLAG_NNL
     global FLAG_NTOR
+    global FLAG_TS
 
     for flag in flagList:
         if flag == "-nnl":
             FLAG_NNL = True
         elif flag == "-ntor":
             FLAG_NTOR = True
+        elif flag == "-ts":
+            FLAG_TS = True
+
+
+
+BUF_OUT = bytearray()
+def PreprocessOutput(byteList):
+    global BUF_OUT
+
+    BUF_OUT.extend(byteList)
+
+def HasWholeLine():
+    global BUF_OUT
+
+    retVal = False
+
+    partList = BUF_OUT.split(b'\n')
+
+    if len(partList) > 1:
+        retVal = True
+
+    return retVal
+
+def GetNextWholeLine():
+    global BUF_OUT
+
+    line     = ""
+    partList = BUF_OUT.split(b'\n')
+
+    if len(partList) > 1:
+        for b in partList[0]:
+            try:
+                bConverted = "".join(map(chr, [b]))
+
+                line = line + bConverted
+            except:
+                pass
+
+        BUF_OUT = BUF_OUT[len(partList[0]) + 1:]
+
+    return line
+
 
 def PreprocessInput(byteList):
     global FLAG_NNL
@@ -98,8 +142,19 @@ def Main():
 
     # create callbacks
     def OnSerialReadable(byteList):
-        sys.stdout.write(byteList)
-        sys.stdout.flush()
+        global FLAG_TS
+        global BUF_OUT
+
+        if FLAG_TS:
+            PreprocessOutput(byteList)            
+
+            while HasWholeLine():
+                line = GetNextWholeLine()
+
+                Log(line)
+        else:
+            sys.stdout.write(byteList)
+            sys.stdout.flush()
 
     def OnKeyboardReadable(byteList):
         byteList = PreprocessInput(byteList)
