@@ -138,7 +138,7 @@ def Main():
     baud    = int(baud)
 
     # create serial comms object
-    ser = SerialRaw(bcPinRx, bcPinTx, baud)
+    ser = SerialRaw(bcPinRx, bcPinTx, baud, 5)
 
     # create callbacks
     def OnSerialReadable(byteList):
