@@ -28,10 +28,12 @@ def GroupArgs(argv):
 FLAG_NNL  = False
 FLAG_NTOR = False
 FLAG_TS   = False
+FLAG_TS_CSV = False
 def ProcessFlags(flagList):
     global FLAG_NNL
     global FLAG_NTOR
     global FLAG_TS
+    global FLAG_TS_CSV
 
     for flag in flagList:
         if flag == "-nnl":
@@ -40,6 +42,8 @@ def ProcessFlags(flagList):
             FLAG_NTOR = True
         elif flag == "-ts":
             FLAG_TS = True
+        elif flag == "-tsCsv":
+            FLAG_TS_CSV = True
 
 
 
@@ -119,6 +123,8 @@ def Main():
         print("    bcPinTx can be - if not in use (read only)")
         print("    use -nnl flag to strip off trailing \\n")
         print("    use -ntor flag to convert \\n to \\r")
+        print("    use -ts flag to timestamp each line")
+        print("    use -tsCsv flag to timestamp each line, separated by comma")
         sys.exit(-1)
 
     # set default arguments
@@ -143,15 +149,19 @@ def Main():
     # create callbacks
     def OnSerialReadable(byteList):
         global FLAG_TS
+        global FLAG_TS_CSV
         global BUF_OUT
 
-        if FLAG_TS:
+        if FLAG_TS or FLAG_TS_CSV:
             PreprocessOutput(byteList)            
 
             while HasWholeLine():
                 line = GetNextWholeLine()
 
-                Log(line)
+                if FLAG_TS:
+                    Log(line)
+                else:
+                    LogCsv(line)
         else:
             sys.stdout.write(byteList)
             sys.stdout.flush()

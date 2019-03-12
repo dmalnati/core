@@ -132,6 +132,21 @@ def Log(msg):
 
     print(logStr)
 
+def LogCsv(msg):
+    global logDateAlso
+
+    logStr = ""
+
+    if logDateAlso:
+        logStr += datetime.datetime.today().strftime('%Y-%m-%d')
+        logStr += ", "
+
+    logStr += str(TimeNow())
+    logStr += ", "
+    logStr += msg
+
+    print(logStr)
+
 
 def GetPrettyJSON(jsonObj):
     return json.dumps(jsonObj,
