@@ -15,12 +15,15 @@ def GroupArgs(argv):
     argList  = []
     flagList = []
 
+    argLast = ""
     if len(argv):
         for arg in argv:
-            if arg[0] == "-" and arg != "-":
+            if (arg[0] == "-" and arg != "-") or argLast == "-c":
                 flagList.append(arg)
             else:
                 argList.append(arg)
+
+            argLast = arg
 
     return (argList, flagList)
 
@@ -29,13 +32,20 @@ FLAG_NNL  = False
 FLAG_NTOR = False
 FLAG_TS   = False
 FLAG_TS_CSV = False
+CMD_LIST = []
 def ProcessFlags(flagList):
     global FLAG_NNL
     global FLAG_NTOR
     global FLAG_TS
     global FLAG_TS_CSV
+    global CMD_LIST
 
-    for flag in flagList:
+    i = 0
+    flagListLen = len(flagList)
+
+    while i < flagListLen:
+        flag = flagList[i]
+
         if flag == "-nnl":
             FLAG_NNL = True
         elif flag == "-ntor":
@@ -44,7 +54,12 @@ def ProcessFlags(flagList):
             FLAG_TS = True
         elif flag == "-tsCsv":
             FLAG_TS_CSV = True
+        elif flag == "-c":
+            i = i + 1
+            CMD_LIST = flagList[i].split(";")
+            CMD_LIST = map(str.strip, CMD_LIST)
 
+        i = i + 1
 
 
 BUF_OUT = bytearray()
@@ -111,6 +126,8 @@ def PreprocessInput(byteList):
 
 
 def Main():
+    global CMD_LIST
+
     argList, flagList = GroupArgs(sys.argv)
 
     ProcessFlags(flagList)
@@ -125,6 +142,7 @@ def Main():
         print("    use -ntor flag to convert \\n to \\r")
         print("    use -ts flag to timestamp each line")
         print("    use -tsCsv flag to timestamp each line, separated by comma")
+        print("    use -c to specify (;)delimited cmd list to send on startup")
         sys.exit(-1)
 
     # set default arguments
@@ -175,6 +193,12 @@ def Main():
     # register callbacks
     ser.SetCbOnRxAvailable(OnSerialReadable)
     WatchStdinEndLoopOnEOF(OnKeyboardReadable, binary=True)
+
+    # pass along any commands specified
+    if bcPinTx:
+        for cmd in CMD_LIST:
+            print(cmd)
+            ser.Send(cmd + "\n")
 
     evm_MainLoop()
 
