@@ -1,5 +1,11 @@
 import sqlite3
 
+import os
+import sys
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', ''))
+from myLib.utl import *
+
 
 class Database():
     def __init__(self, databaseName):
@@ -120,6 +126,12 @@ class Table():
         
     def GetFieldList(self):
         return self.db.GetFieldListFromSchema(self.schema)
+        
+    def GetKeyFieldList(self):
+        return self.keyFieldList
+        
+    def GetNonKeyFieldList(self):
+        return [field for field in self.GetFieldList() if field not in self.GetKeyFieldList()]
     
     def GetRecordAccessor(self):
         return Record(self)
@@ -179,6 +191,9 @@ class Record():
             rowid = -1
         
         return rowid
+        
+    def SetRowId(self, rowid):
+        self.Set('rowid', rowid)
             
     def Get(self, name):
         retVal = ""
@@ -213,6 +228,7 @@ class Record():
                 WHERE   %s
                 """ % (self.table.tableName, whereStr)
     
+        
         retVal, rowList = self.table.db.Query(query)
         
         if retVal:
@@ -271,6 +287,25 @@ class Record():
         retVal = self.table.db.QueryCommit(query)
         
         return retVal
+    
+    def Update(self):
+        updateStr = ""
+        sep = ""
+        for field in self.table.GetNonKeyFieldList():
+            updateStr += sep + field + " = '" + self.Get(field) + "'"
+            sep = ", "
+    
+        query = """
+                UPDATE  %s
+                SET     %s
+                WHERE   rowid = %s
+                """ % (self.table.tableName, updateStr, self.GetRowId())
+    
+        retVal = self.table.db.QueryCommit(query)
+        
+        return retVal
+    
+    
     
     
     

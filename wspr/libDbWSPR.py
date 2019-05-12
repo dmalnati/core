@@ -7,14 +7,24 @@ class DatabaseWSPR(Database):
     def __init__(self):
         Database.__init__(self, self.databaseName)
         
-        self.tableDownload = Table(self, "DOWNLOAD", self.GetSchema(), self.GetFieldListFromSchema(self.GetSchema()))
+        self.tableDownload = \
+            Table(self,
+                  "DOWNLOAD",
+                  self.GetSchemaDownload(),
+                  self.GetFieldListFromSchema(self.GetSchemaDownload()))
+        
+        self.tableNameValue = \
+            Table(self,
+                  "NAME_VALUE",
+                  self.GetSchemaNameValue(),
+                  ["NAME"])
         
         
     def GetTableDownload(self):
         return self.tableDownload
         
         
-    def GetSchema(self):
+    def GetSchemaDownload(self):
         return [
             ('DATE',      'text'),
             ('CALLSIGN',  'text'),
@@ -28,6 +38,15 @@ class DatabaseWSPR(Database):
             ('RGRID',     'text'),
             ('KM',        'text'),
             ('MI',        'text')
+        ]
+
+    def GetTableNameValue(self):
+        return self.tableNameValue
+        
+    def GetSchemaNameValue(self):
+        return [
+            ('NAME',  'text'),
+            ('VALUE', 'text')
         ]
 
 
