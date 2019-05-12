@@ -22,7 +22,8 @@ def GetDataAtUrl(url):
 def MakeWSPRUrl(limit):
     url  = "http://wsprnet.org/olddb"
     url += "?mode=html"
-    url += "&band=all"
+    #url += "&band=all"
+    url += "&band=20"
     url += "&limit=%i" % (limit)
     url += "&findcall="
     url += "&findreporter="
@@ -38,7 +39,13 @@ def strip_non_ascii(string):
         
     
 def ParseWsprSpotFromOldDatabaseHtml(byteList):
-    soup = BeautifulSoup(byteList, 'html.parser')
+
+    Log("Parsing downloaded file")
+    timeStart = DateTimeNow()
+    #soup = BeautifulSoup(byteList, 'html.parser')  ;# 56 sec
+    soup = BeautifulSoup(byteList, 'lxml') ;# 54 sec
+    timeEnd = DateTimeNow()
+    secDiff = DateTimeStrDiffSec(timeEnd, timeStart)
     
     # Get the number of spots in the database, total
     # table 1
@@ -46,8 +53,6 @@ def ParseWsprSpotFromOldDatabaseHtml(byteList):
     #     column 5
     
     spotStr = soup.find_all('table')[0].find_all('tr')[0].find_all('td')[4].contents[0].split()[0]
-    
-    print("spots: %s" % (spotStr))
     
     # Get all the spots
     # table 3
@@ -67,24 +72,54 @@ def ParseWsprSpotFromOldDatabaseHtml(byteList):
     trHeader   = trList[1]
     trDataList = trList[2:]
     
+    Log("  Parsing took %s seconds" % secDiff)
+    Log("  WSPRnet Spot Count: %s" % Commas(spotStr))
+    Log("    %s Records downloaded (%s rec/sec)" % (Commas(len(trDataList)), Commas(len(trDataList) // secDiff)))
+    Log("")
+    
+    
     # fill out record
     db = DatabaseWSPR()
     t = db.GetTableDownload()
     rec = t.GetRecordAccessor()
     
-    # wipe out all the old records
-    rec.StartLinearScan()
+    Log("Local cache starting count: %s" % Commas(t.Count()))
+    Log("")
     
-    while rec.GetNext():
-        print(rec.Get('DBM'))
-        
+    # wipe out all the old records
+    ONE_HOUR_IN_SECONDS = 60 * 60
+    Log("Removing records older than 1 hour")
+
+    timeStart = DateTimeNow()
+    timeNow = timeStart
+    deleteCount = t.DeleteOlderThan(ONE_HOUR_IN_SECONDS)
+    #deleteCount = 0
+    #while rec.ReadNextInLinearScan():
+    #    ts = rec.Get("TIMESTAMP")
+    #    
+    #    secDiff = DateTimeStrDiffSec(timeNow, ts)
+    #    
+    #    if secDiff >= ONE_HOUR_IN_SECONDS:
+    #        rec.Delete()
+    #        deleteCount += 1
+    
+    timeEnd = DateTimeNow()
+    secDiff = DateTimeStrDiffSec(timeEnd, timeStart)
+    
+    Log("Deleted %s records" % Commas(deleteCount))
+    Log("  Removing took %s seconds" % secDiff)
+    Log("")
     
     # add new records
+    Log("Updating with new records")
+    timeStart = DateTimeNow();
+    
+    db.BatchBegin()
+    
     rec.Reset()
+    insertCount = 0
     for trData in trDataList:
         valList = map(lambda x : strip_non_ascii(x.contents[0]), trData.find_all('td'))
-        
-        print(valList)
         
         rec.Set("DATE",      valList[0])
         rec.Set("CALLSIGN",  valList[1])
@@ -99,10 +134,21 @@ def ParseWsprSpotFromOldDatabaseHtml(byteList):
         rec.Set("KM",        valList[10])
         rec.Set("MI",        valList[11])
         
-        print("DBM: %s" % rec.Get("DBM"))
-        
-        if rec.RecordExistsInDatabase() == False:
-            rec.Insert()
+        #if rec.Read() == False:
+        if rec.Insert():
+            insertCount += 1
+    
+    db.BatchEnd()
+    
+    timeEnd = DateTimeNow()
+    secDiff = DateTimeStrDiffSec(timeEnd, timeStart)
+    
+    Log("Inserted %s records" % Commas(insertCount))
+    Log("  Inserting took %s seconds" % secDiff)
+    
+    Log("")
+    Log("Local cache ending count: %s" % Commas(t.Count()))
+    Log("")
     
     
 def file_get_contents(filename):
@@ -111,23 +157,28 @@ def file_get_contents(filename):
 
 
 def Main():
-    limit = 50
+    LogIncludeDate(True)
+
+    limit = 1000
     url   = MakeWSPRUrl(limit)
 
-    print("url: %s" % url)
+    Log("Downloading latest %s spots from WSPRnet" % Commas(limit))
     
-    #byteList = GetDataAtUrl(url)
-    byteList = file_get_contents("testInput.txt")
-    print("byteListLen: %i" % len(byteList))
     
-    #print("byteList: %s" % byteList)
+    timeStart = DateTimeNow()
+    byteList = GetDataAtUrl(url)
+    #byteList = file_get_contents("testInput.txt")
+    timeEnd = DateTimeNow()
+    secDiff = DateTimeStrDiffSec(timeEnd, timeStart)
+    Log("  Download took %i seconds -- %s bytes" % (secDiff, Commas(len(byteList))))
+    Log("")
     
     ParseWsprSpotFromOldDatabaseHtml(byteList)
     
 
 
-
-Main()
+while True:
+    Main()
 
 
 

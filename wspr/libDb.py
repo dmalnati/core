@@ -9,6 +9,9 @@ class Database():
         
         self.conn.row_factory = sqlite3.Row
         
+        self.batchOn    = False
+        self.batchCount = 0
+        
     def GetFieldListFromSchema(self, schema):
         return [x[0] for x in schema]
 
@@ -50,51 +53,59 @@ class Database():
                 CREATE TABLE %s
                 ( %s %s %s )
                 """ % (name, timestampFieldStr, schemaStr, keyStr)
-        print(query)
 
         c = self.conn.cursor()
         c.execute(query)
     
 
     def Query(self, query, valList = []):
-        retVal = False
-        
-        print(query)
-        
-        self.c = self.conn.cursor()
-        self.c.execute(query, valList)
-        self.all = self.c.fetchall()
-        
-        if len(self.all) != 0:
-            retVal = True
-        
-        return retVal
-
-
-
-    def QueryCommit(self, query, valList = []):
-        print(query)
+        retVal  = False
+        rowList = []
         
         c = self.conn.cursor()
         c.execute(query, valList)
-        self.conn.commit()
         
-        return True
+        rowList = c.fetchall()
         
-    
-    def GetNext(self, rec):
-        retVal = False
-        
-        if len(self.all):
+        if len(rowList) != 0:
             retVal = True
-            
-            row      = self.all[0]
-            self.all = self.all[1:]
-            
-            for key in row.keys():
-                rec.Set(key, row[key])
+        
+        return retVal, rowList
+
+    def BatchBegin(self):
+        self.BatchEnd()
+        
+        self.batchOn = True
+        
+    def BatchEnd(self):
+        retVal = self.batchCount
+        
+        if self.batchCount:
+            self.conn.commit()
+        
+        self.batchOn    = False
+        self.batchCount = 0
         
         return retVal
+        
+    def QueryCommit(self, query, valList = []):
+        retVal = True
+        
+        c = self.conn.cursor()
+        
+        try:
+            c.execute(query, valList)
+        except:
+            retVal = False
+        
+        if self.batchOn == False:
+            self.conn.commit()
+        else:
+            self.batchCount += 1
+        
+        return retVal
+        
+    
     
 
 class Table():
@@ -112,21 +123,68 @@ class Table():
     
     def GetRecordAccessor(self):
         return Record(self)
+        
+    def Count(self):
+        retVal = 0
+        
+        query = """
+                SELECT  count(*) as COUNT
+                FROM    %s
+                """ % (self.tableName)
+    
+        retVal, rowList = self.db.Query(query)
+        
+        if retVal:
+            retVal = rowList[0]['COUNT']
+        
+        return retVal
+        
+    def DeleteOlderThan(self, sec):
+        countBefore = self.Count()
+        
+        query = """
+                DELETE
+                FROM    %s
+                WHERE   TIMESTAMP <= datetime('now', '-%s seconds')
+                """ % (self.tableName, sec)
+    
+        retVal = self.db.QueryCommit(query)
+        
+        countAfter = self.Count()
+        
+        retVal = countBefore - countAfter
+        
+        return retVal
 
         
 class Record():
     def __init__(self, table, name__value = dict()):
-        self.table       = table
-        self.name__value = name__value
+        self.table = table
+        
+        self.Reset()
+        self.Overwrite(name__value)
         
     def Reset(self):
-        for key in self.name__value.keys():
-            self.Set(key, "")
+        self.name__value = dict()
 
+    ###############################
+    ##
+    ## Field Accessors
+    ##
+    ###############################
+    
+    def GetRowId(self):
+        rowid = self.Get('rowid')
+        if rowid == "":
+            rowid = -1
+        
+        return rowid
+            
     def Get(self, name):
         retVal = ""
 
-        retVal = self.name__value[name]
+        if name in self.name__value:
+            retVal = self.name__value[name]
         
         return retVal
     
@@ -134,7 +192,13 @@ class Record():
         self.name__value[name] = value
     
     
-    def RecordExistsInDatabase(self):
+    ###############################
+    ##
+    ## Database Operations
+    ##
+    ###############################
+    
+    def Read(self):
         retVal = False
         
         whereStr = ""
@@ -144,15 +208,16 @@ class Record():
             sep = " AND "
     
         query = """
-                SELECT  *
+                SELECT  rowid, datetime(TIMESTAMP, 'localtime') AS TIMESTAMP, *
                 FROM    %s
                 WHERE   %s
                 """ % (self.table.tableName, whereStr)
     
-        retVal = self.table.db.Query(query)
+        retVal, rowList = self.table.db.Query(query)
         
-        print("retVal: %s" % retVal)
-
+        if retVal:
+            self.Overwrite(rowList[0])
+        
         return retVal
     
     def Insert(self):
@@ -176,26 +241,69 @@ class Record():
     
         retVal = self.table.db.QueryCommit(query)
         
-        print("retVal: %s" % retVal)
-
         return retVal
 
         
-    def StartLinearScan(self):
+    def ReadNextInLinearScan(self):
         query = """
-                SELECT  *
-                FROM    %s
-                ORDER BY rowid
-                """ % (self.table.tableName)
+                SELECT    rowid, datetime(TIMESTAMP, 'localtime') AS TIMESTAMP, *
+                FROM      %s
+                WHERE     rowid > %s
+                ORDER BY  rowid ASC
+                LIMIT     1
+                """ % (self.table.tableName, self.GetRowId())
     
-        retVal = self.table.db.Query(query)
+        retVal, rowList = self.table.db.Query(query)
         
-        print("retVal: %s" % retVal)
+        if retVal:
+            self.Overwrite(rowList[0])
 
         return retVal
+    
+    
+    def Delete(self):
+        query = """
+                DELETE
+                FROM    %s
+                WHERE   rowid = %s
+                """ % (self.table.tableName, self.GetRowId())
+    
+        retVal = self.table.db.QueryCommit(query)
         
-    def GetNext(self):
-        return self.table.db.GetNext(self)
+        return retVal
+    
+    
+    
+    ###############################
+    ##
+    ## Private
+    ##
+    ###############################
+        
+    def Overwrite(self, name__value):
+        self.Reset()
+        
+        for key in name__value.keys():
+            self.name__value[key] = name__value[key]
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         
         
         
