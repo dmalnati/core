@@ -9,24 +9,41 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', ''))
 from myLib.utl import *
 
 from libDbWSPR import *
+from libAPRS import *
 
 
 class App:
-    def __init__(self, user, password, intervalSec):
+    def __init__(self, user, password, intervalSec, startMode):
+        # Basic object configuration
         self.user        = user
         self.password    = password
         self.intervalSec = intervalSec
+        
+        # state keeping
+        self.call__recTdList = dict()
+        self.dateLast        = ""
+        self.count = 0
+        
+        Log("Configured for:")
+        Log("  user        = %s" % self.user)
+        Log("  password    = %s" % self.password)
+        Log("  intervalSec = %s" % intervalSec)
+        Log("  startMode   = %s" % startMode)
+        Log("")
         
         # get handles to database
         self.db  = DatabaseWSPR()
         self.td  = self.db.GetTableDownload()
         self.tnv = self.db.GetTableNameValue()
         
-        Log("Configured for:")
-        Log("  user        = %s" % self.user)
-        Log("  password    = %s" % self.password)
-        Log("  intervalSec = %s" % intervalSec)
-        Log("")
+        # handle cold start
+        if startMode == "cold":
+            rowIdLast = self.GetLast()
+            
+            Log("    Resetting last processed to -1 from %s" % rowIdLast)
+            Log("")
+            
+            self.SetLast(-1)
         
     def GetLast(self):
         rec = self.tnv.GetRecordAccessor()
@@ -88,6 +105,84 @@ class App:
     
         self.Post(loginStr, aprsMsg)
 
+    
+    
+    
+    def OnUpdate(self, recTd):
+        #recTd.DumpVertical(Log)
+        #Log("")
+        
+        # assume updates are in chronological order
+        # we want to know when we've seen the last of a 2-minute bucket
+        date = recTd.Get("DATE")
+        
+        if self.count >= 20 or self.dateLast != "" and self.dateLast != date:
+            # the time has changed, batch process all stored data
+            self.OnAllUpdatesThisPeriodComplete()
+            
+            self.count = 0
+            
+        
+        self.count += 1
+        
+        # keep track of the time, if it changed, you've handled it by now
+        self.dateLast = date
+        
+        # more of the same
+        self.OnUpdateRec(recTd)
+    
+
+    def OnUpdateRec(self, recTd):
+        call = recTd.Get("CALLSIGN")
+        
+        if call not in self.call__recTdList:
+            self.call__recTdList[call] = []
+            
+        self.call__recTdList[call].append(recTd)
+        
+        
+        
+    # DOWNLOAD[11680]
+    #   DATE     : 2019-05-13 02:20
+    #   CALLSIGN : 8P9DH
+    #   FREQUENCY: 14.097130
+    #   SNR      : -23
+    #   DRIFT    : 0
+    #   GRID     : GK03
+    #   DBM      : +37
+    #   WATTS    : 5.012
+    #   REPORTER : WA2ZKD
+    #   RGRID    : FN13ed
+    #   KM       : 3748
+    #   MI       : 2329
+    #
+    #  KN4IUD-11>WSPR,TCPIP*:/225418h2646.53N/08259.54WO294/010/A=008810 MM17  ) !',$   #
+    #
+    def OnAllUpdatesThisPeriodComplete(self):
+        Log("")
+        Log("Changes this period: %s" % self.dateLast)
+        for call in self.call__recTdList:
+            recTdList = self.call__recTdList[call]
+            
+            # reference using the first element
+            recTd = recTdList[0]
+            
+            if len(recTd.Get("GRID")) == 6:
+                recTd.DumpVertical(Log)
+                Log("")
+                
+                amm = APRSMessageMaker()
+
+                wsprCall = call
+                wsprDate = recTd.Get("DATE")
+                wsprGrid = recTd.Get("GRID")
+                altitudeFt = 0
+                
+                msg = amm.MakeLocationReportMessage(wsprCall, wsprDate, wsprGrid, altitudeFt)
+                
+                Log("%s : %s" % (call, len(recTdList)))
+                Log(msg)
+
 
     def Process(self):
         Log("Scanning DOWNLOAD for new spots")
@@ -103,6 +198,7 @@ class App:
         timeStart = DateTimeNow()
         while recTd.ReadNextInLinearScan():
             count += 1
+            self.OnUpdate(recTd)
         
         timeEnd = DateTimeNow()
         secDiff = DateTimeStrDiffSec(timeEnd, timeStart)
@@ -156,9 +252,10 @@ def Main():
     
     # default arguments
     intervalSec = 30
+    startMode   = "warm"
 
     if len(sys.argv) < 3 or (len(sys.argv) >= 2 and sys.argv[1] == "--help"):
-        print("Usage: %s <user> <pass> <intervalSec=%s>" % (sys.argv[0], intervalSec))
+        print("Usage: %s <user> <pass> <intervalSec=%s> <startMode=%s>" % (sys.argv[0], intervalSec, startMode))
         sys.exit(-1)
 
     user     = sys.argv[1]
@@ -167,9 +264,12 @@ def Main():
     # pull out arguments
     if len(sys.argv) >= 4:
         intervalSec = int(sys.argv[3])
+
+    if len(sys.argv) >= 5:
+        startMode = sys.argv[4]
         
     # create and run app
-    app = App(user, password, intervalSec)
+    app = App(user, password, intervalSec, startMode)
     app.Run()
 
 

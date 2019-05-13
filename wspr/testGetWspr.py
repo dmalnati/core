@@ -19,6 +19,10 @@ class App:
         self.intervalSec = intervalSec
         self.batchSize   = batchSize
         
+        # Access database
+        self.db  = DatabaseWSPR()
+        self.t   = self.db.GetTableDownload()
+        
         Log("Configured for:")
         Log("  intervalSec = %s" % self.intervalSec)
         Log("  batchSize   = %s" % self.batchSize)
@@ -32,7 +36,6 @@ class App:
     def MakeWSPRUrl(self, limit):
         url  = "http://wsprnet.org/olddb"
         url += "?mode=html"
-        #url += "&band=all"
         url += "&band=20"
         url += "&limit=%i" % (limit)
         url += "&findcall="
@@ -95,15 +98,14 @@ class App:
         Log("  WSPRnet Server Spot Count: %s" % Commas(spotStr))
         Log("")
         
-        return trDataList
+        trDataListChronoOrder = trDataList[::-1]
+        
+        return trDataListChronoOrder
         
     def Store(self, trDataList):
-        # Access database
-        db  = DatabaseWSPR()
-        t   = db.GetTableDownload()
-        rec = t.GetRecordAccessor()
+        rec = self.t.GetRecordAccessor()
         
-        Log("Local cache starting count: %s" % Commas(t.Count()))
+        Log("Local cache starting count: %s" % Commas(self.t.Count()))
         Log("")
         
         # wipe out all the old records
@@ -112,7 +114,7 @@ class App:
 
         timeStart = DateTimeNow()
         timeNow = timeStart
-        deleteCount = t.DeleteOlderThan(ONE_HOUR_IN_SECONDS)
+        deleteCount = self.t.DeleteOlderThan(ONE_HOUR_IN_SECONDS)
         timeEnd = DateTimeNow()
         secDiff = DateTimeStrDiffSec(timeEnd, timeStart)
         
@@ -124,7 +126,7 @@ class App:
         Log("Updating with new records")
         timeStart = DateTimeNow();
         
-        db.BatchBegin()
+        self.db.BatchBegin()
         
         rec.Reset()
         insertCount = 0
@@ -148,7 +150,7 @@ class App:
             if rec.Insert():
                 insertCount += 1
         
-        db.BatchEnd()
+        self.db.BatchEnd()
         
         timeEnd = DateTimeNow()
         secDiff = DateTimeStrDiffSec(timeEnd, timeStart)
@@ -157,11 +159,11 @@ class App:
         Log("  Inserting took %s seconds" % secDiff)
         
         Log("")
-        Log("Local cache ending count: %s" % Commas(t.Count()))
+        Log("Local cache ending count: %s" % Commas(self.t.Count()))
         Log("")
         
         
-    def file_get_contents(filename):
+    def file_get_contents(self, filename):
         with open(filename) as f:
             return f.read()
 
@@ -181,13 +183,16 @@ class App:
         Log("Downloading latest %s spots from WSPRnet" % Commas(self.batchSize))
         timeStart = DateTimeNow()
         byteList = self.GetDataAtUrl(url)
-        #byteList = file_get_contents("testInput.txt")
+        #byteList = self.file_get_contents("testInput.txt")
+        #byteList = self.file_get_contents("testInputMineFull.txt")
         timeEnd = DateTimeNow()
         secDiff = DateTimeStrDiffSec(timeEnd, timeStart)
         Log("  Download took %i seconds -- %s bytes" % (secDiff, Commas(len(byteList))))
         Log("")
         
         self.ParseAndStoreWsprSpotFromOldDatabaseHtml(byteList)
+        
+        #exit()
     
     
     def OnTimeout(self):

@@ -42,11 +42,11 @@ class Database():
         return retVal
         
     def CreateTable(self, name, schema, keyFieldList = []):
-        schemaStr = ", ".join(" ".join(list(x)) for x in schema)
-        
         # handle creating TIMESTAMP field, which isn't part of the key
         # unless input indicates it as such
         timestampFieldStr = "TIMESTAMP DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, "
+        
+        schemaStr = ", ".join(" ".join(list(x)) for x in schema)
         
         # handle creating primary key
         keyStr = ""
