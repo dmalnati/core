@@ -40,28 +40,59 @@ class Database():
             retVal = True
         
         return retVal
+    
+    # http://www.sqlitetutorial.net/sqlite-autoincrement/
+    # http://www.sqlitetutorial.net/sqlite-index/
+    def CreateTable(self, tableName, schema, keyFieldList = []):
         
-    def CreateTable(self, name, schema, keyFieldList = []):
-        # handle creating TIMESTAMP field, which isn't part of the key
-        # unless input indicates it as such
-        timestampFieldStr = "TIMESTAMP DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, "
+        # 2-part setup
+        #
+        # Establish the shape of the table:
+        # - all fields and types
+        # - plus default adding TIMESTAMP field which is auto-set
+        # - plus explicitly using rowid which never uses the same value twice
+        #   - makes knowing last record seen very efficient, finding new too
+        #
+        # Then establish unique indexes, which guarantees that you can't get
+        # duplicates if you try to insert another record with the same values.
+        # This is used as a faster method of search-then-insert.
+        #
         
+        
+        # Step 1, setup the shape of the table and create
         schemaStr = ", ".join(" ".join(list(x)) for x in schema)
-        
-        # handle creating primary key
-        keyStr = ""
-        if len(keyFieldList):
-            keyStr += ", PRIMARY KEY("
-            keyStr += ", ".join(keyFieldList)
-            keyStr += ")"
         
         query = """
                 CREATE TABLE %s
-                ( %s %s %s )
-                """ % (name, timestampFieldStr, schemaStr, keyStr)
-
+                (
+                    rowid INTEGER PRIMARY KEY AUTOINCREMENT,
+                    TIMESTAMP DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                    %s
+                )
+                """ % (tableName, schemaStr)
+        
+        print(query)
+        
         c = self.conn.cursor()
         c.execute(query)
+        
+        
+        
+        # Step 2, establish the unique index
+        if len(keyFieldList):
+            keyFieldListStr = ", ".join(keyFieldList)
+            
+            query = """
+                CREATE UNIQUE INDEX %s_IDX
+                ON %s ( %s )
+                """ % (tableName, tableName, keyFieldListStr)
+            
+            print(query)
+            
+            c = self.conn.cursor()
+            c.execute(query)
+        
+
     
 
     def Query(self, query, valList = []):
