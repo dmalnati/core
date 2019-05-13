@@ -150,7 +150,24 @@ class Table():
             retVal = rowList[0]['COUNT']
         
         return retVal
+    
+    def GetHighestRowId(self):
+        retVal = -1
         
+        query = """
+                SELECT    rowid
+                FROM      %s
+                ORDER BY  rowid DESC
+                LIMIT     1
+                """ % (self.tableName)
+    
+        retVal, rowList = self.db.Query(query)
+        
+        if retVal:
+            retVal = int(rowList[0]['rowid'])
+        
+        return retVal
+    
     def DeleteOlderThan(self, sec):
         countBefore = self.Count()
         
@@ -178,6 +195,49 @@ class Record():
         
     def Reset(self):
         self.name__value = dict()
+        
+    ###############################
+    ##
+    ## Pretty
+    ##
+    ###############################
+    
+    def DumpVertical(self, printer = None):
+        if printer == None:
+            def Print(str):
+                print(str)
+            printer = Print
+    
+        printer(self.table.tableName + "[" + str(self.GetRowId()) + "]")
+        
+        max = 0
+        for field in self.table.GetFieldList():
+            strLen = len(field)
+            
+            if strLen > max:
+                max = strLen
+    
+        formatStr = "  %-" + str(max) + "s: %s"
+
+        for field in self.table.GetFieldList():
+            printer(formatStr % (field, self.Get(field)))
+
+    def DumpHorizontal(self, width = 8, printer = None):
+        if printer == None:
+            def Print(str):
+                print(str)
+            printer = Print
+    
+        
+        dumpStr = "[" + str(self.GetRowId()) + "]"
+        
+        formatStr = "%-" + str(width) + "s"
+        
+        for field in self.table.GetFieldList():
+            dumpStr += " "
+            dumpStr += formatStr % (self.Get(field))
+
+        printer(dumpStr)
 
     ###############################
     ##
