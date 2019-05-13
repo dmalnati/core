@@ -44,7 +44,6 @@ class Database():
     # http://www.sqlitetutorial.net/sqlite-autoincrement/
     # http://www.sqlitetutorial.net/sqlite-index/
     def CreateTable(self, tableName, schema, keyFieldList = []):
-        
         # 2-part setup
         #
         # Establish the shape of the table:
@@ -58,7 +57,6 @@ class Database():
         # This is used as a faster method of search-then-insert.
         #
         
-        
         # Step 1, setup the shape of the table and create
         schemaStr = ", ".join(" ".join(list(x)) for x in schema)
         
@@ -71,12 +69,8 @@ class Database():
                 )
                 """ % (tableName, schemaStr)
         
-        print(query)
-        
         c = self.conn.cursor()
         c.execute(query)
-        
-        
         
         # Step 2, establish the unique index
         if len(keyFieldList):
@@ -87,12 +81,8 @@ class Database():
                 ON %s ( %s )
                 """ % (tableName, tableName, keyFieldListStr)
             
-            print(query)
-            
             c = self.conn.cursor()
             c.execute(query)
-        
-
     
 
     def Query(self, query, valList = []):
