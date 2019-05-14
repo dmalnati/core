@@ -58,8 +58,7 @@ class App:
     def Parse(self, byteList):
         Log("Parsing downloaded file")
         timeStart = DateTimeNow()
-        #soup = BeautifulSoup(byteList, 'html.parser')  ;# 56 sec
-        soup = BeautifulSoup(byteList, 'lxml') ;# 54 sec
+        soup = BeautifulSoup(byteList, 'lxml')
         timeEnd = DateTimeNow()
         secDiff = DateTimeStrDiffSec(timeEnd, timeStart)
         
@@ -182,9 +181,9 @@ class App:
         
         Log("Downloading latest %s spots from WSPRnet" % Commas(self.batchSize))
         timeStart = DateTimeNow()
-        byteList = self.GetDataAtUrl(url)
+        #byteList = self.GetDataAtUrl(url)
         #byteList = self.file_get_contents("testInput.txt")
-        #byteList = self.file_get_contents("testInputMineFull.txt")
+        byteList = self.file_get_contents("testInputMineFull.txt")
         timeEnd = DateTimeNow()
         secDiff = DateTimeStrDiffSec(timeEnd, timeStart)
         Log("  Download took %i seconds -- %s bytes" % (secDiff, Commas(len(byteList))))
@@ -215,7 +214,9 @@ class App:
         
         evm_SetTimeout(self.OnTimeout, timeoutMs)
         
-    
+    def OnStdIn(self, str):
+        pass
+        
     def Run(self):
         def OnStdIn(inputStr):
             inputStr = inputStr.strip()

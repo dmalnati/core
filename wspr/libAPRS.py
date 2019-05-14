@@ -12,11 +12,16 @@ class APRSMessageMaker:
     def __init__(self):
         pass
     
-    #  KN4IUD-11>WSPR,TCPIP*:/225418h2646.53N/08259.54WO294/010/A=008810 MM17  ) !',$   #
-    def MakeLocationReportMessage(self, call, wsprDate, grid, altitudeFt):
+    def GetRefStr(self):
+        return "KN4IUD-11>WSPR,TCPIP*:/225418h2646.53N/08259.54WO294/010/A=008810 MM17  ) !',$   #"
+    
+    def GetRefStrNoSSID(self):
+        return "KN4IUD>WSPR,TCPIP*:/225418h2646.53N/08259.54WO294/010/A=008810 MM17  ) !',$   #"
+    
+    def MakeLocationReportMessage(self, call, ssid, wsprDate, grid, altitudeFt, extraData = ""):
         # Basic APRS message
         callsign           = call
-        ssid               = 0      ;# not even using
+        ssid               = str(ssid)
         receivedBy         = "WSPR"
         timeOfReceptionUtc = self.GetTimeUtc(wsprDate)
         latitudeStr        = self.ConvertGridToAPRSLatitude(grid)
@@ -27,17 +32,12 @@ class APRSMessageMaker:
         speedKnots         = self.GetSpeedKnots(0)
         altitudeFt         = self.ConvertAltitudeFtToAPRSFeet(altitudeFt)
         
-        # Interesting WSPR data fun to slot in
-        freqAtBestSnr  = ""
-        driftAtBestSnr = ""
-        updCount       = ""
-
         # Encoded data fun to slot in
         # ...
 
         # Construct message
         msg  = ""
-        msg += callsign
+        msg += callsign + "-" + ssid
         msg += ">"
         msg += receivedBy
         msg += ",TCPIP*"
@@ -51,6 +51,11 @@ class APRSMessageMaker:
         msg += courseDegs
         msg += speedKnots
         msg += altitudeFt
+        
+        # There are now 43 bytes remaining for comment
+        # Testing shows you can add as much arbitrary data as you want.
+        # There are no rules on TCPIP uploads it seems, just do whatever.
+        msg += extraData
         
         return msg
         
@@ -166,7 +171,7 @@ class APRSMessageMaker:
         if secondsAsHundredths == 100:
             secondsAsHundredths = 99
         
-        str = "%02i%02i%02i%c" % (degreesPos, minutes, secondsAsHundredths, northOrSouth)
+        str = "%02i%02i.%02i%c" % (degreesPos, minutes, secondsAsHundredths, northOrSouth)
         
         return str
     
@@ -233,8 +238,7 @@ class APRSMessageMaker:
         if secondsAsHundredths == 100:
             secondsAsHundredths = 99
         
-        str = "%03i%02i%02i%c" % (degreesPos, minutes, secondsAsHundredths, eastOrWest)
-        
+        str = "%03i%02i.%02i%c" % (degreesPos, minutes, secondsAsHundredths, eastOrWest)
         return str
         
 
@@ -269,7 +273,7 @@ class APRSMessageMaker:
     #################################################
         
     def ConvertAltitudeFtToAPRSFeet(self, altitudeFt):
-        str = "/A=%06s" % (altitudeFt)
+        str = "/A=%06i" % (altitudeFt)
         
         return str
         
