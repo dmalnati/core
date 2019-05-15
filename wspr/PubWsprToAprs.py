@@ -78,7 +78,7 @@ class App:
         
         # Prepare to walk records
         recTd = self.td.GetRecordAccessor()
-        recTd.SetRowId(self.GetLast() - 1350)
+        recTd.SetRowId(self.GetLast())
         
         Log("  Starting from rowid %s" % recTd.GetRowId())
         
@@ -145,10 +145,10 @@ def Main():
     # default arguments
     intervalSec = 30
     startMode   = "warm"
-    debug       = "normal"
+    debug       = False
 
     if len(sys.argv) < 3 or (len(sys.argv) >= 2 and sys.argv[1] == "--help"):
-        print("Usage: %s <user> <pass> <intervalSec=%s> <startMode=%s> <debug=%s>" % (sys.argv[0], intervalSec, startMode, debug))
+        print("Usage: %s <user> <pass> <intervalSec=%s> <startMode=%s> <debug=normal>" % (sys.argv[0], intervalSec, startMode))
         sys.exit(-1)
 
     user     = sys.argv[1]
