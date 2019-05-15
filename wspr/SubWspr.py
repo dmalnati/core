@@ -181,9 +181,9 @@ class App:
         
         Log("Downloading latest %s spots from WSPRnet" % Commas(self.batchSize))
         timeStart = DateTimeNow()
-        #byteList = self.GetDataAtUrl(url)
+        byteList = self.GetDataAtUrl(url)
         #byteList = self.file_get_contents("testInput.txt")
-        byteList = self.file_get_contents("testInputMineFull.txt")
+        #byteList = self.file_get_contents("testInputMineFull.txt")
         timeEnd = DateTimeNow()
         secDiff = DateTimeStrDiffSec(timeEnd, timeStart)
         Log("  Download took %i seconds -- %s bytes" % (secDiff, Commas(len(byteList))))
