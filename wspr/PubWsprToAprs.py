@@ -9,15 +9,16 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', ''))
 from myLib.utl import *
 
 from libDbWSPR import *
-from libAPRS import *
+from libWsprToAprsBridge import *
 
 
 class App:
-    def __init__(self, user, password, intervalSec, startMode):
+    def __init__(self, user, password, intervalSec, startMode, debug):
         # Basic object configuration
         self.intervalSec = intervalSec
         
         Log("Configured for:")
+        Log("  debug       = %s" % debug)
         Log("  user        = %s" % user)
         Log("  password    = %s" % password)
         Log("  intervalSec = %s" % intervalSec)
@@ -30,7 +31,7 @@ class App:
         self.tnv = self.db.GetTableNameValue()
         
         # get bridge
-        self.bridge = WsprToAprsBridge(user, password)
+        self.bridge = WsprToAprsBridge(user, password, debug)
         
         # handle cold start
         if startMode == "cold":
@@ -144,9 +145,10 @@ def Main():
     # default arguments
     intervalSec = 30
     startMode   = "warm"
+    debug       = "normal"
 
     if len(sys.argv) < 3 or (len(sys.argv) >= 2 and sys.argv[1] == "--help"):
-        print("Usage: %s <user> <pass> <intervalSec=%s> <startMode=%s>" % (sys.argv[0], intervalSec, startMode))
+        print("Usage: %s <user> <pass> <intervalSec=%s> <startMode=%s> <debug=%s>" % (sys.argv[0], intervalSec, startMode, debug))
         sys.exit(-1)
 
     user     = sys.argv[1]
@@ -158,9 +160,12 @@ def Main():
 
     if len(sys.argv) >= 5:
         startMode = sys.argv[4]
+    
+    if len(sys.argv) >= 6:
+        debug = (sys.argv[5] != "normal")
         
     # create and run app
-    app = App(user, password, intervalSec, startMode)
+    app = App(user, password, intervalSec, startMode, debug)
     app.Run()
 
 

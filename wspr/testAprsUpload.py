@@ -3,7 +3,7 @@
 import os
 import sys
 
-from libAPRS import *
+from libAPRSUploader import *
 
 def Main():
     retVal = 0
