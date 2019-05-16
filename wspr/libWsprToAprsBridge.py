@@ -114,7 +114,7 @@ class WsprToAprsBridge:
         # group by callsign
         call__nvList = dict()
         for nvDecoded in nvDecodedList:
-            call = nvDecoded["CALLSIGN"]
+            call = nvDecoded["CALLSIGN_DECODED"]
             
             if call not in call__nvList.keys():
                 call__nvList[call] = []
@@ -152,7 +152,7 @@ class WsprToAprsBridge:
             wsprCall = call
             ssid     = 15
             wsprDate = name__value["DATE"]
-            wsprGrid = name__value["GRID"]
+            wsprGrid = name__value["GRID_DECODED"]
             altitudeFt = name__value["ALTITUDE_FT"]
             
             # extra 43 bytes useful for whatever you want
