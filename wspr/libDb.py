@@ -18,6 +18,28 @@ class Database():
         self.batchOn    = False
         self.batchCount = 0
         
+    # Deal with concurrency exceptions
+    # basically, if the database is locked doing some other process' work, then
+    # exceptions can get thrown after a timeout goes off.
+    # I am not interested in this, so simply re-try until something other than
+    # a timeout exception occurs.
+    def Execute(self, query, valList = []):
+        c = self.conn.cursor()
+        
+        tryAgain = True
+        
+        while tryAgain:
+            try:
+                c.execute(query, valList)
+                tryAgain = False
+            except sqlite3.OperationalError as e:
+                pass
+            except Exception as e:
+                raise e
+            
+        return c
+        
+        
     def GetFieldListFromSchema(self, schema):
         return [x[0] for x in schema]
 
@@ -33,8 +55,7 @@ class Database():
                 WHERE   type='table' AND name=?
                 """
         
-        c = self.conn.cursor()
-        c.execute(query, valList)
+        c = self.Execute(query, valList)
         
         if c.fetchone() != None:
             retVal = True
@@ -69,8 +90,7 @@ class Database():
                 )
                 """ % (tableName, schemaStr)
         
-        c = self.conn.cursor()
-        c.execute(query)
+        c = self.Execute(query)
         
         # Step 2, establish the unique index
         if len(keyFieldList):
@@ -81,17 +101,14 @@ class Database():
                 ON %s ( %s )
                 """ % (tableName, tableName, keyFieldListStr)
             
-            c = self.conn.cursor()
-            c.execute(query)
+            c = self.Execute(query)
     
 
     def Query(self, query, valList = []):
         retVal  = False
         rowList = []
         
-        c = self.conn.cursor()
-        c.execute(query, valList)
-        
+        c = self.Execute(query, valList)
         rowList = c.fetchall()
         
         if len(rowList) != 0:
@@ -118,10 +135,8 @@ class Database():
     def QueryCommit(self, query, valList = []):
         retVal = True
         
-        c = self.conn.cursor()
-        
         try:
-            c.execute(query, valList)
+            self.Execute(query, valList)
         except:
             retVal = False
         
