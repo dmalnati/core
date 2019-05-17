@@ -26,7 +26,7 @@ class WsprToAprsBridge:
         self.cbOnRateLimit        = self.DefaultCbOnRateLimit
         
     def DefaultCbFnOnPreUpload(self, name__value, aprsMsg):
-        fieldList = [
+        fieldRawList = [
             'DATE',
             'CALLSIGN',
             'FREQUENCY',
@@ -40,15 +40,29 @@ class WsprToAprsBridge:
             'KM',
             'MI'
         ]
-    
-        nvStr = ""
-        sep = ""
+        
+        fieldList = name__value.keys()
+        fieldList.sort()
+        
+        max = 0
         for field in fieldList:
-            nvStr += sep + str(name__value[field])
-            sep = " "
+            strLen = len(field)
+            
+            if strLen > max:
+                max = strLen
     
-        Log(nvStr)
+        formatStr = "%-" + str(max) + "s: %s"
+
+        for field in fieldList:
+            prefix = "    "
+            if field not in fieldRawList:
+                prefix = "   +"
+            
+            if field != "TIMESTAMP" and field != "rowid":
+                Log(prefix + formatStr % (field, str(name__value[field])))
+            
         Log(aprsMsg)
+        
     
     def SetCbFnOnPreUpload(self, cbFnOnPreUpload):
         self.cbFnOnPreUpload = cbFnOnPreUpload
@@ -140,7 +154,9 @@ class WsprToAprsBridge:
                     distMiMax    = distMi
                     reporterBest = name__value["REPORTER"]
             
-                snr = name__value["SNR"][1:]
+                snr = name__value["SNR"]
+                if snr[0] == "+":
+                    snr = snr[1:]
                 if snr > snrMax:
                     snrMax = snr
                     freqBest = name__value["FREQUENCY"]
@@ -153,17 +169,19 @@ class WsprToAprsBridge:
             ssid     = 15
             wsprDate = name__value["DATE"]
             wsprGrid = name__value["GRID_DECODED"]
+            speedMph = name__value["SPEED_MPH"]
             altitudeFt = name__value["ALTITUDE_FT"]
             
             # extra 43 bytes useful for whatever you want
             extraData  = ""
-            extraData +=       name__value["DATE"]
+            extraData += " " + self.ConvertCtoF(name__value["TEMPERATURE_C"]) + "F"
+            extraData += " " + self.ConvertMilliVoltToVolt(name__value["VOLTAGE"]) + "V"
             extraData += " " + distMiMax + "mi"
             extraData += " " + reporterBest
-            extraData += " " + snrMax
+            extraData += " " + "snr=" + snrMax
             extraData += " " + freqBest
             
-            msg = self.amm.MakeLocationReportMessage(wsprCall, ssid, wsprDate, wsprGrid, altitudeFt, extraData)
+            msg = self.amm.MakeLocationReportMessage(wsprCall, ssid, wsprDate, wsprGrid, speedMph, altitudeFt, extraData)
             
             # upload APRS message
             # but throttle to 1 upload per callsign to avoid server rate limiting
@@ -186,4 +204,14 @@ class WsprToAprsBridge:
         # reset state
         self.nvList = []
 
+    def ConvertCtoF(self, tempC):
+        return str(int((tempC * (9.0 / 5.0)) + 32))
+
+    def ConvertMilliVoltToVolt(self, milliVolt):
+        volt = milliVolt / 1000.0
+        voltStr = "%0.1f" % volt
+        
+        return voltStr
+        
+        
         

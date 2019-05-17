@@ -88,7 +88,7 @@ class WSPRDecoder:
         
     def GetDecodedGrid(self, name__value):
         grid0to4 = name__value["GRID"]
-        grid5to6 = name__value["CALLSIGN"][3:4]
+        grid5to6 = name__value["CALLSIGN"][3:5]
         
         grid0to6 = grid0to4 + grid5to6
         
@@ -109,7 +109,7 @@ class WSPRDecoder:
         return milliVolt
 
     def DecodePower(self, name__value):
-        dbm = name__value["DBM"]
+        dbm = name__value["DBM"][1:]    ;# strip the +
         
         powerList = [ 0, 3, 7, 10, 13, 17, 20, 23, 27, 30, 33, 37, 40, 43, 47, 50, 53, 57, 60 ]
         
@@ -117,7 +117,7 @@ class WSPRDecoder:
         
         idx = 0
         for power in powerList:
-            if dbm == power:
+            if dbm == str(power):
                 idxMatch = idx
         
             idx += 1
@@ -129,17 +129,17 @@ class WSPRDecoder:
     def DecodeCallsign2(self, name__value):
         c2Val = self.UnMapFromAlphaNum(name__value["CALLSIGN"][1])
         
-        ftIncr500Val,  c2Val = self.Unpack(c2Val, 2)
-        ftIncr1000Val, c2Val = self.Unpack(c2Val, 2)
-        speedMph,      c2Val = self.Unpack(c2Val, 9)
+        ftIncr500Val,  c2Val = self.UnPack(c2Val, 2)
+        ftIncr1000Val, c2Val = self.UnPack(c2Val, 2)
+        speedMph,      c2Val = self.UnPack(c2Val, 9)
         
         return speedMph, ftIncr1000Val, ftIncr500Val
 
     def DecodeCallsign6(self, name__value):
         c6Val = self.UnMapFromAlphaSpace(name__value["CALLSIGN"][5])
         
-        milliVolt,    c6Val = self.Unpack(c6Val, 3)
-        temperatureC, c6Val = self.Unpack(c6Val, 8)
+        milliVolt,    c6Val = self.UnPack(c6Val, 3)
+        temperatureC, c6Val = self.UnPack(c6Val, 8)
         
         return temperatureC, milliVolt
         
@@ -169,7 +169,7 @@ class WSPRDecoder:
         unpackVal            = unpackSource  % valueCount
         unpackSourceAdjusted = unpackSource // valueCount
     
-        return unp
+        return unpackVal, unpackSourceAdjusted
         
         
         

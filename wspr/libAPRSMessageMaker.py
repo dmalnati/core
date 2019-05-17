@@ -16,7 +16,7 @@ class APRSMessageMaker:
     def GetRefStrNoSSID(self):
         return "KN4IUD>WSPR,TCPIP*:/225418h2646.53N/08259.54WO294/010/A=008810 MM17  ) !',$   #"
     
-    def MakeLocationReportMessage(self, call, ssid, wsprDate, grid, altitudeFt, extraData = ""):
+    def MakeLocationReportMessage(self, call, ssid, wsprDate, grid, speedMph, altitudeFt, extraData = ""):
         # Basic APRS message
         callsign           = call
         ssid               = str(ssid)
@@ -27,7 +27,7 @@ class APRSMessageMaker:
         longitudeStr       = self.ConvertGridToAPRSLongitude(grid)
         symbolCode         = "O"    ;# balloon
         courseDegs         = self.GetCourseDegs(0)
-        speedKnots         = self.GetSpeedKnots(0)
+        speedKnots         = self.GetSpeedKnotsFromSpeedMph(speedMph)
         altitudeFt         = self.ConvertAltitudeFtToAPRSFeet(altitudeFt)
         
         # Encoded data fun to slot in
@@ -53,7 +53,7 @@ class APRSMessageMaker:
         # There are now 43 bytes remaining for comment
         # Testing shows you can add as much arbitrary data as you want.
         # There are no rules on TCPIP uploads it seems, just do whatever.
-        msg += extraData
+        msg += extraData[0:43]
         
         return msg
         
@@ -85,18 +85,18 @@ class APRSMessageMaker:
         
         # Capture input value for manipulation
         valRemaining = float(latOrLongInMillionths)                    ;# eg 40736878
-        
+
         # Calculate degrees
-        degrees = int(valRemaining // ONE_MILLION)                     ;# eg 40
-        
+        degrees = int(valRemaining / ONE_MILLION)                     ;# eg 40
+
         # Calculate minutes by converting millionths of a degree
         valRemaining = abs(valRemaining) - \
                        (abs(degrees) * ONE_MILLION)                   ;# eg   736878
         
         valRemaining = (valRemaining / ONE_MILLION) * MIN_PER_DEGREE  ;# eg   44.21268
-        
+
         minutes = int(valRemaining)                                   ;# eg 44
-        
+
         # Calculate seconds by converting the fractional minutes
         valRemaining -= minutes                                       ;# eg .21268
         
@@ -258,8 +258,8 @@ class APRSMessageMaker:
     ##
     #################################################
         
-    def GetSpeedKnots(self, speedKnots):
-        str = "/%03i" % (int(speedKnots))
+    def GetSpeedKnotsFromSpeedMph(self, speedMph):
+        str = "/%03i" % (int(speedMph / 1.151))
         
         return str
         
