@@ -247,7 +247,7 @@ def Main():
     intervalSec = 30
     batchSize   = 2000
 
-    if len(sys.argv) > 3 or (len(sys.argv) >= 2 and sys.argv[1] == "--help"):
+    if len(sys.argv) > 4 or (len(sys.argv) >= 2 and sys.argv[1] == "--help"):
         print("Usage: %s <hoursToKeep=%s> <intervalSec=%s> <batchSize=%s>" % (sys.argv[0], hoursToKeep, intervalSec, batchSize))
         sys.exit(-1)
 
