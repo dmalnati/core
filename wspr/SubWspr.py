@@ -15,7 +15,8 @@ from bs4 import BeautifulSoup
 
 
 class App:
-    def __init__(self, intervalSec, batchSize):
+    def __init__(self, hoursToKeep, intervalSec, batchSize):
+        self.hoursToKeep = hoursToKeep
         self.intervalSec = intervalSec
         self.batchSize   = batchSize
         
@@ -24,6 +25,7 @@ class App:
         self.t   = self.db.GetTableDownload()
         
         Log("Configured for:")
+        Log("  hoursToKeep = %s" % self.hoursToKeep)
         Log("  intervalSec = %s" % self.intervalSec)
         Log("  batchSize   = %s" % self.batchSize)
         Log("")
@@ -109,11 +111,12 @@ class App:
         
         # wipe out all the old records
         ONE_HOUR_IN_SECONDS = 60 * 60
+        durationToKeepInSeconds = ONE_HOUR_IN_SECONDS * self.hoursToKeep
         Log("Removing records older than 1 hour")
 
         timeStart = DateTimeNow()
         timeNow = timeStart
-        deleteCount = self.t.DeleteOlderThan(ONE_HOUR_IN_SECONDS)
+        deleteCount = self.t.DeleteOlderThan(durationToKeepInSeconds)
         timeEnd = DateTimeNow()
         secDiff = DateTimeStrDiffSec(timeEnd, timeStart)
         
@@ -240,22 +243,26 @@ def Main():
     LogIncludeDate(True)
     
     # default arguments
+    hoursToKeep = 24
     intervalSec = 30
     batchSize   = 2000
 
     if len(sys.argv) > 3 or (len(sys.argv) >= 2 and sys.argv[1] == "--help"):
-        print("Usage: %s <intervalSec=%s> <batchSize=%s>" % (sys.argv[0], intervalSec, batchSize))
+        print("Usage: %s <hoursToKeep=%s> <intervalSec=%s> <batchSize=%s>" % (sys.argv[0], hoursToKeep, intervalSec, batchSize))
         sys.exit(-1)
 
     # pull out arguments
     if len(sys.argv) >= 2:
-        intervalSec = int(sys.argv[1])
-    
+        hoursToKeep = int(sys.argv[1])
+        
     if len(sys.argv) >= 3:
-        batchSize = int(sys.argv[2])
+        intervalSec = int(sys.argv[2])
+    
+    if len(sys.argv) >= 4:
+        batchSize = int(sys.argv[3])
     
     # create and run app
-    app = App(intervalSec, batchSize)
+    app = App(hoursToKeep, intervalSec, batchSize)
     app.Run()
 
 
