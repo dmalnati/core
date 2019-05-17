@@ -2,7 +2,7 @@ from libDb import *
 
 
 class DatabaseWSPR(Database):
-    databaseName = "wspr.db"
+    databaseName = "/run/shm/wspr.db"
 
     def __init__(self):
         Database.__init__(self, self.databaseName)
