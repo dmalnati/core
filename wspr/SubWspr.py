@@ -54,56 +54,45 @@ class App:
             
         
     def ParseAndStoreWsprSpotFromOldDatabaseHtml(self, byteList):
-        trDataList = self.Parse(byteList)
-        self.Store(trDataList)
+        rowList = self.Parse(byteList)
+        self.Store(rowList)
+        
         
     def Parse(self, byteList):
+        rowList = []
+        
         Log("Parsing downloaded file")
         timeStart = DateTimeNow()
-        soup = BeautifulSoup(byteList, 'lxml')
+        
+        lineList = byteList.split("\n")
+        
+        for line in lineList:
+            if line.find("&nbsp;") != -1:
+                linePartList = line.split("&nbsp;")
+                
+                row = linePartList[1::2]
+                
+                rowList.append(row)
+                
+        
+        # put in chronological order
+        rowList = rowList[::-1]
+        
         timeEnd = DateTimeNow()
         secDiff = DateTimeStrDiffSec(timeEnd, timeStart)
         
-        # Get the number of spots in the database, total
-        # table 1
-        #   row 1
-        #     column 5
-        
-        spotStr = soup.find_all('table')[0].find_all('tr')[0].find_all('td')[4].contents[0].split()[0]
-        
-        # Get all the spots
-        # table 3
-        #
-        # the first two rows are headers
-        # after that it's data
-        #
-        # 12 columns of data (ignore the goofy double header rows)
-        #                                                         Power,       Reported,     Distance
-        # Date,             Call,  Frequency, SNR, Drift, Grid,   dBm, W,     by,   loc,    km,   mi
-        # 2019-05-11 23:58, W6LVP, 7.040035,  -28, 0,     DM04li, +37, 5.012, K2JY, EM40xa, 2762, 1716
-        # ...
-        #
-        
-        trList = soup.find_all('table')[2].find_all('tr')
-        
-        trHeader   = trList[1]
-        trDataList = trList[2:]
-        
         recPerSecStr = "inf"
         if secDiff != 0:
-            recPerSecStr = Commas(len(trDataList) // secDiff)
-        
+            recPerSecStr = Commas(len(rowList) // secDiff)
         
         Log("  Parsing took %s seconds" % secDiff)
-        Log("  %s Records downloaded (%s rec/sec)" % (Commas(len(trDataList)), recPerSecStr))
-        Log("  WSPRnet Server Spot Count: %s" % Commas(spotStr))
+        Log("  %s Records downloaded (%s rec/sec)" % (Commas(len(rowList)), recPerSecStr))
         Log("")
         
-        trDataListChronoOrder = trDataList[::-1]
-        
-        return trDataListChronoOrder
-        
-    def Store(self, trDataList):
+        return rowList
+    
+    
+    def Store(self, rowList):
         rec = self.t.GetRecordAccessor()
         
         Log("Local cache starting count: %s" % Commas(self.t.Count()))
@@ -132,8 +121,21 @@ class App:
         
         rec.Reset()
         insertCount = 0
-        for trData in trDataList:
-            valList = map(lambda x : self.strip_non_ascii(x.contents[0]), trData.find_all('td'))
+        for row in rowList:
+            # Get all the spots
+            # table 3
+            #
+            # the first two rows are headers
+            # after that it's data
+            #
+            # 12 columns of data (ignore the goofy double header rows)
+            #                                                         Power,       Reported,     Distance
+            # Date,             Call,  Frequency, SNR, Drift, Grid,   dBm, W,     by,   loc,    km,   mi
+            # 2019-05-11 23:58, W6LVP, 7.040035,  -28, 0,     DM04li, +37, 5.012, K2JY, EM40xa, 2762, 1716
+            # ...
+            #
+            
+            valList = row
             
             rec.Set("DATE",      valList[0])
             rec.Set("CALLSIGN",  valList[1])
@@ -185,7 +187,7 @@ class App:
         Log("Downloading latest %s spots from WSPRnet" % Commas(self.batchSize))
         timeStart = DateTimeNow()
         byteList = self.GetDataAtUrl(url)
-        #byteList = self.file_get_contents("testInput.txt")
+        #byteList = self.file_get_contents("old.huge.html")
         #byteList = self.file_get_contents("testInputMineFull.txt")
         timeEnd = DateTimeNow()
         secDiff = DateTimeStrDiffSec(timeEnd, timeStart)
