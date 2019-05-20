@@ -80,6 +80,22 @@ def HasWholeLine():
 
     return retVal
 
+
+# Escape sequence looks like
+# <27>[31m (so 5 bytes)
+def StripControlSequences(stripMe):
+    esc = chr(27)
+
+    strRemaining = stripMe
+
+    while esc in strRemaining:
+        idx = strRemaining.find(esc)
+
+        strRemaining = strRemaining[0:idx] + strRemaining[idx + 5:]
+
+    return strRemaining
+
+
 def GetNextWholeLine():
     global BUF_OUT
 
@@ -94,6 +110,14 @@ def GetNextWholeLine():
                 line = line + bConverted
             except:
                 pass
+
+        # prevent control characters from getting to log files
+        # this would likely be from coloring output
+        # going to the terminal is ok, though, so we check if it's a terminal
+        # that the output is headed for
+        if not sys.stdout.isatty():
+            line = StripControlSequences(line)
+
 
         BUF_OUT = BUF_OUT[len(partList[0]) + 1:]
 
@@ -170,7 +194,7 @@ def Main():
         global FLAG_TS_CSV
         global BUF_OUT
 
-        if FLAG_TS or FLAG_TS_CSV:
+        if True or FLAG_TS or FLAG_TS_CSV:
             PreprocessOutput(byteList)            
 
             while HasWholeLine():
@@ -178,8 +202,12 @@ def Main():
 
                 if FLAG_TS:
                     Log(line)
-                else:
+                elif FLAG_TS_CSV:
                     LogCsv(line)
+                else:
+                    sys.stdout.write(line)
+                    sys.stdout.write("\n")
+                    sys.stdout.flush()
         else:
             sys.stdout.write(byteList)
             sys.stdout.flush()
