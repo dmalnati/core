@@ -95,7 +95,7 @@ class SerialRaw():
     def OnTimeoutCheckRx(self):
         (count, byteList) = self.pigd.bb_serial_read(self.bcPinRx)
 
-        if self.cbOnRxAvailable:
+        if count and self.cbOnRxAvailable:
             self.cbOnRxAvailable(byteList)
 
         evm_SetTimeout(self.OnTimeoutCheckRx, self.RX_POLL_PERIOD_MS)
