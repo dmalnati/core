@@ -118,7 +118,6 @@ def GetNextWholeLine():
         if not sys.stdout.isatty():
             line = StripControlSequences(line)
 
-
         BUF_OUT = BUF_OUT[len(partList[0]) + 1:]
 
     return line
@@ -194,7 +193,11 @@ def Main():
         global FLAG_TS_CSV
         global BUF_OUT
 
-        if True or FLAG_TS or FLAG_TS_CSV:
+        lineBuffered = True
+        if sys.stdout.isatty():
+            lineBuffered = False
+
+        if lineBuffered or FLAG_TS or FLAG_TS_CSV:
             PreprocessOutput(byteList)            
 
             while HasWholeLine():
