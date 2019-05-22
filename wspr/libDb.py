@@ -61,10 +61,26 @@ class Database():
             retVal = True
         
         return retVal
+        
+    def CreateTableIndex(self, tableName, keyFieldList, unique = False):
+        if len(keyFieldList):
+            keyFieldListStr = ", ".join(keyFieldList)
+            indexName       = "_".join(keyFieldList) + "_IDX"
+            
+            uniqueStr = ""
+            if unique:
+                uniqueStr = "UNIQUE"
+            
+            query = """
+                CREATE %s INDEX %s
+                ON %s ( %s )
+                """ % (uniqueStr, indexName, tableName, keyFieldListStr)
+            
+            c = self.Execute(query)
     
     # http://www.sqlitetutorial.net/sqlite-autoincrement/
     # http://www.sqlitetutorial.net/sqlite-index/
-    def CreateTable(self, tableName, schema, keyFieldList = []):
+    def CreateTable(self, tableName, schema, keyFieldList = [], indexFieldListList = []):
         # 2-part setup
         #
         # Establish the shape of the table:
@@ -92,16 +108,15 @@ class Database():
         
         c = self.Execute(query)
         
+        # create timestamp index
+        self.CreateTableIndex(tableName, ["TIMESTAMP"])
+
         # Step 2, establish the unique index
-        if len(keyFieldList):
-            keyFieldListStr = ", ".join(keyFieldList)
+        self.CreateTableIndex(tableName, keyFieldList, unique = True)
             
-            query = """
-                CREATE UNIQUE INDEX %s_IDX
-                ON %s ( %s )
-                """ % (tableName, tableName, keyFieldListStr)
-            
-            c = self.Execute(query)
+        # Step 3, create any table-specific indexes
+        for indexFieldList in indexFieldListList:
+            self.CreateTableIndex(tableName, indexFieldList)
     
 
     def Query(self, query, valList = []):
@@ -151,14 +166,15 @@ class Database():
     
 
 class Table():
-    def __init__(self, db, tableName, schema, keyFieldList = []):
-        self.db           = db
-        self.tableName    = tableName
-        self.schema       = schema
-        self.keyFieldList = keyFieldList
+    def __init__(self, db, tableName, schema, keyFieldList = [], indexFieldListList = []):
+        self.db                 = db
+        self.tableName          = tableName
+        self.schema             = schema
+        self.keyFieldList       = keyFieldList
+        self.indexFieldListList = indexFieldListList
         
         if self.db.TableExists(self.tableName) == False:
-            self.db.CreateTable(self.tableName, self.schema, keyFieldList)
+            self.db.CreateTable(self.tableName, self.schema, self.keyFieldList, self.indexFieldListList)
         
     def GetFieldList(self):
         return self.db.GetFieldListFromSchema(self.schema)
@@ -220,6 +236,26 @@ class Table():
         retVal = countBefore - countAfter
         
         return retVal
+        
+    def Distinct(self, field):
+        name__value = dict()
+        
+        query = """
+                SELECT DISTINCT ( %s ) as %s, count(*) as COUNT
+                FROM %s
+                GROUP BY %s
+                """ % (field, field, self.tableName, field)
+        
+        retVal, rowList = self.db.Query(query)
+        
+        if retVal:
+            for row in rowList:
+                name  = row[field]
+                value = row["COUNT"]
+                
+                name__value[name] = value
+            
+        return name__value
 
         
 class Record():

@@ -11,7 +11,8 @@ class DatabaseWSPR(Database):
             Table(self,
                   "DOWNLOAD",
                   self.GetSchemaDownload(),
-                  self.GetFieldListFromSchema(self.GetSchemaDownload()))
+                  self.GetFieldListFromSchema(self.GetSchemaDownload()),
+                  [["CALLSIGN"]])
         
         self.tableNameValue = \
             Table(self,
