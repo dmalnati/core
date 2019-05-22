@@ -67,22 +67,23 @@ class WSPRDecoder:
         if id == "00":
             retVal = "KD2KDD"
             
-        if id == "Q1":
+        if id == "Q4":
             retVal = "KD2KDD"
         
         return retVal
     
     def GetDecodedSpeedMph(self, name__value):
-        speedMph, ftIncr1000Val, ftIncr500Val = self.DecodeCallsign2(name__value)
+        speedKnotsIncr, ftIncr1000Val, ftIncr500Val = self.DecodeCallsign2(name__value)
         
-        speedMph = speedMph * 18
+        speedKnots = speedKnotsIncr * 16
+        speedMph   = round(speedKnots * 1.151)
         
         return speedMph
         
     def GetDecodedAltitudeFt(self, name__value):
         retVal = 0
         
-        speedMph, ftIncr1000Val, ftIncr500Val = self.DecodeCallsign2(name__value)
+        speedKnotsIncr, ftIncr1000Val, ftIncr500Val = self.DecodeCallsign2(name__value)
         ftIncr2000Val                         = self.DecodePower(name__value)
         
         retVal = (2000 * ftIncr2000Val) + (1000 * ftIncr1000Val) + (500 * ftIncr500Val)
@@ -132,11 +133,11 @@ class WSPRDecoder:
     def DecodeCallsign2(self, name__value):
         c2Val = self.UnMapFromAlphaNum(name__value["CALLSIGN"][1])
         
-        ftIncr500Val,  c2Val = self.UnPack(c2Val, 2)
-        ftIncr1000Val, c2Val = self.UnPack(c2Val, 2)
-        speedMph,      c2Val = self.UnPack(c2Val, 9)
+        ftIncr500Val,   c2Val = self.UnPack(c2Val, 2)
+        ftIncr1000Val,  c2Val = self.UnPack(c2Val, 2)
+        speedKnotsIncr, c2Val = self.UnPack(c2Val, 9)
         
-        return speedMph, ftIncr1000Val, ftIncr500Val
+        return speedKnotsIncr, ftIncr1000Val, ftIncr500Val
 
     def DecodeCallsign6(self, name__value):
         c6Val = self.UnMapFromAlphaSpace(name__value["CALLSIGN"][5])
