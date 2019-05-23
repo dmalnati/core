@@ -163,6 +163,7 @@ class WsprToAprsBridge:
             
             # reference using the first element
             name__value = nvList[0]
+            countHeard  = len(nvList)
             
             # construct APRS message
             wsprCall = call
@@ -177,8 +178,9 @@ class WsprToAprsBridge:
             extraData += " " + self.ConvertCtoF(name__value["TEMPERATURE_C"]) + "F"
             extraData += " " + self.ConvertMilliVoltToVolt(name__value["VOLTAGE"]) + "V"
             extraData += " " + distMiMax + "mi"
-            extraData += " " + reporterBest
-            extraData += " " + "snr=" + snrMax
+            extraData += " " + name__value["CALLSIGN"]
+            extraData += " " + str(countHeard)
+            extraData += " " + snrMax
             extraData += " " + freqBest
             
             msg = self.amm.MakeLocationReportMessage(wsprCall, ssid, wsprDate, wsprGrid, speedMph, altitudeFt, extraData)

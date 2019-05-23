@@ -64,10 +64,10 @@ class WSPRDecoder:
         
         id = str(name__value["CALLSIGN"][0]) + str(name__value["CALLSIGN"][2])
         
-        if id == "00":
-            retVal = "KD2KDD"
+        #if id == "00":
+        #    retVal = "KD2KDD"
             
-        if id == "Q4":
+        if id == "Q2":
             retVal = "KD2KDD"
         
         return retVal
