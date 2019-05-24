@@ -160,6 +160,14 @@ class WsprToAprsBridge:
                 if snr > snrMax:
                     snrMax = snr
                     freqBest = name__value["FREQUENCY"]
+                    
+            # convert freqBest to just the relevant part of the frequency
+            # in order to use less space.
+            # eg 14.097034 - 14.097000 * 10,000,000=  34
+
+            FREQ_LOW = 14.097000
+            freqBest = float(freqBest)
+            freqOffset = str(int((freqBest - FREQ_LOW) * 1000000))
             
             # reference using the first element
             name__value = nvList[0]
@@ -181,7 +189,8 @@ class WsprToAprsBridge:
             extraData += " " + name__value["CALLSIGN"]
             extraData += " " + str(countHeard)
             extraData += " " + snrMax
-            extraData += " " + freqBest
+            extraData += " " + freqOffset
+            extraData += " " + name__value["DRIFT"]
             
             msg = self.amm.MakeLocationReportMessage(wsprCall, ssid, wsprDate, wsprGrid, speedMph, altitudeFt, extraData)
             
