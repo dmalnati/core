@@ -1,0 +1,5 @@
+# format:
+# <service> <port>
+
+
+TEST_SERVICE localhost 1234 /ws
