@@ -98,6 +98,15 @@ def WatchStdinEndLoopOnEOF(cbFn, binary=False):
 
     WatchStdin(Handler, binary)
 
+def WatchStdinLinesEndLoopOnEOF(cbFn, binary=False):
+    def OnStdIn(inputStr):
+        inputStr = inputStr.strip()
+
+        if inputStr != "":
+            cbFn(inputStr)
+            
+    WatchStdinEndLoopOnEOF(OnStdIn, binary)
+
 
 #######################################################################
 #
