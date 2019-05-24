@@ -105,10 +105,39 @@ def WatchStdinEndLoopOnEOF(cbFn, binary=False):
 #
 #######################################################################
 
+
+def DateNow():
+    formatStr = "%Y-%m-%d"
+
+    return datetime.datetime.now().strftime(formatStr)
+
 def TimeNow():
     return datetime.datetime.now().time().isoformat()
 
+def DateTimeNow():
+    formatStr = "%Y-%m-%d %H:%M:%S.%f"
+    
+    return datetime.datetime.now().strftime(formatStr)
 
+    
+def DateTimeStrDiffSec(dtStr1, dtStr2):
+    formatStr = "%Y-%m-%d %H:%M:%S"
+    
+    # drop any trailing microsecond values, we don't care
+    # about that here
+    dtStr1New = dtStr1.split(".")[0]
+    dtStr2New = dtStr2.split(".")[0]
+
+    dt1 = datetime.datetime.strptime(dtStr1New, formatStr)
+    dt2 = datetime.datetime.strptime(dtStr2New, formatStr)
+    
+    dtDiff = dt1 - dt2
+    
+    secDiff = int(dtDiff.total_seconds())
+    
+    return secDiff
+    
+    
 logDateAlso = False
 
 def LogIncludeDate(yesNo):
@@ -128,7 +157,7 @@ def Log(msg):
 
     logStr += str(TimeNow())
     logStr += "]: "
-    logStr += msg
+    logStr += str(msg)
 
     print(logStr)
 
@@ -148,6 +177,10 @@ def LogCsv(msg):
     print(logStr)
 
 
+def Commas(strToFormat):
+    return "{:,}".format(int(strToFormat))
+    
+    
 def GetPrettyJSON(jsonObj):
     return json.dumps(jsonObj,
                       sort_keys=True,
