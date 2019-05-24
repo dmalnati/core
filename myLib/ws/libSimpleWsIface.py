@@ -1,6 +1,8 @@
 import os
 import time
 
+import json
+
 from collections import deque
 
 import tornado.httpserver
@@ -79,13 +81,13 @@ class WSNodeMgrEventHandlerIface():
 
     def OnWebSocketConnectedInbound(self, ws):
         pass
-    def OnWebSocketConnectedOutbound(self, ws, userData):
+    def OnWebSocketConnectedOutbound(self, ws):
         pass
-    def OnWebSocketReadable(self, ws, userData):
+    def OnWebSocketReadable(self, ws):
         pass
-    def OnWebSocketClosed(self, ws, userData):
+    def OnWebSocketClosed(self, ws):
         pass
-    def OnWebSocketError(self, ws, userData):
+    def OnWebSocketError(self, ws):
         pass
 
     # private
@@ -240,14 +242,12 @@ class ManagedWSInbound(tornado.websocket.WebSocketHandler, WSIface):
     def on_message(self, msg):
         self.SetMessage(msg)
         if not self.GetSuppressEvents():
-            ManagedWSInbound.HANDLER.OnWebSocketReadable(self, \
-                                                         self.GetUserData())
+            ManagedWSInbound.HANDLER.OnWebSocketReadable(self)
 
     def on_close(self):
         ManagedWSInbound.HANDLER.RemWebSocketInbound(self)
         if not self.GetSuppressEvents():
-            ManagedWSInbound.HANDLER.OnWebSocketClosed(self, \
-                                                       self.GetUserData())
+            ManagedWSInbound.HANDLER.OnWebSocketClosed(self)
 
 
 
@@ -360,22 +360,21 @@ class ManagedWSOutbound(WSOutbound, WSIface):
     def on_connect(self):
         self.handler.AddWebSocketOutbound(self)
         if not self.GetSuppressEvents():
-            self.handler.OnWebSocketConnectedOutbound(self, \
-                                                      self.GetUserData())
+            self.handler.OnWebSocketConnectedOutbound(self)
 
     def on_message(self, msg):
         self.SetMessage(msg)
         if not self.GetSuppressEvents():
-            self.handler.OnWebSocketReadable(self, self.GetUserData())
+            self.handler.OnWebSocketReadable(self)
 
     def on_close(self):
         self.handler.RemWebSocketOutbound(self)
         if not self.GetSuppressEvents():
-            self.handler.OnWebSocketClosed(self, self.GetUserData())
+            self.handler.OnWebSocketClosed(self)
 
     def on_error(self):
         if not self.GetSuppressEvents():
-            self.handler.OnWebSocketError(self, self.GetUserData())
+            self.handler.OnWebSocketError(self)
 
 
 ##########################################################################
@@ -436,7 +435,7 @@ class WSApp(WSNodeMgrEventHandlerIface, WSNodeMgr):
                 addr   = self.GetServiceAddr(service)
                 handle = self.connect(addr)
             elif port:
-                addr   = "ws://localhost:%s/ws" % port
+                addr   = "ws://127.0.0.1:%s/ws" % port
                 handle = self.connect(addr)
             
         return handle
