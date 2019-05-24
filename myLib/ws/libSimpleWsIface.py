@@ -65,6 +65,10 @@ class WSIface():
         self.close()
 
 
+        
+        
+
+
 '''
 This is the  event handler interface users of a WSNodeMgr will implement.
 '''
@@ -140,7 +144,7 @@ class WSNodeMgr():
         mwso.connect_cancel()
 
     # can only do this once
-    def listen(self, port, wsPath, localDirAsWebRoot=None, sslOptions=None):
+    def listen(self, port, wsPath = "/ws", localDirAsWebRoot=None, sslOptions=None):
         retVal = True
 
         if not self.webApp:
@@ -374,14 +378,165 @@ class ManagedWSOutbound(WSOutbound, WSIface):
             self.handler.OnWebSocketError(self, self.GetUserData())
 
 
+##########################################################################
+#
+# Convenience Application Interface
+#
+##########################################################################
+
+class WSApp(WSNodeMgrEventHandlerIface, WSNodeMgr):
+    def __init__(self, serviceOrPort = None):
+        WSNodeMgrEventHandlerIface.__init__(self)
+        WSNodeMgr.__init__(self, self)
+        
+        self.serviceOrPort = serviceOrPort
+        
+        self.service__data = dict()
+        self.ok = self.ReadServiceDirectory()
+        
+        self.service = None
+        self.port    = None
+        if self.serviceOrPort:
+            self.service, self.port = self.LookupService(self.serviceOrPort)
+            
+            if self.service == None or self.port == None:
+                self.ok = None
+        else:
+            self.service = "SERVICE_%s" % str(os.getpid())
+        
+    def IsOk(self):
+        return self.ok
+        
+    def GetServiceAndPort(self):
+        return self.service, self.port
+        
+    def Listen(self):
+        if self.IsOk():
+            data = self.GetServiceData(self.service)
+            
+            self.listen(data["port"], data["wsPath"])
+    
+    def Connect(self, serviceOrAddrOrPort):
+        handle = None
+        
+        isAddr = False
+        try:
+            if serviceOrAddrOrPort.index("ws://") == 0:
+                isAddr = True
+        except:
+            pass
+            
+        if isAddr:
+            addr   = serviceOrAddrOrPort
+            handle = self.connect(addr)
+        else:
+            service, port = self.LookupService(serviceOrAddrOrPort)
+            
+            if service:
+                addr   = self.GetServiceAddr(service)
+                handle = self.connect(addr)
+            elif port:
+                addr   = "ws://localhost:%s/ws" % port
+                handle = self.connect(addr)
+            
+        return handle
+    
+    def ReadServiceDirectory(self):
+        ok = True
+        
+        with open('WSServices.txt', 'r') as file:
+            fileData = file.read().rstrip('\n')
+        
+            lineList = fileData.split("\n")
+            
+            for line in lineList:
+                line = line.strip()
+                
+                if len(line):
+                    if line[0] != "#":
+                        linePartList = line.split(" ")
+                        
+                        if len(linePartList) == 4:
+                            service = linePartList[0]
+                            host    = linePartList[1]
+                            port    = linePartList[2]
+                            wsPath  = linePartList[3]
+                            
+                            data = {
+                                "service" : service,
+                                "host"    : host,
+                                "port"    : port,
+                                "wsPath"  : wsPath,
+                                "addr"    : "ws://" + host + ":" + port + wsPath,
+                            }
+                            
+                            if service in self.service__data:
+                                ok = False
+                            else:
+                                self.service__data[service] = data
+        
+        return ok
+    
+    # pass in either a service name or port
+    #
+    # if service name:
+    #   and found -- return set service and port
+    #   not found -- service is set
+    #
+    # if port:
+    #   and found -- bad, that's a clash
+    #     return service name = None, port = port
+    #   not found -- good, not a clash
+    #     return synthetic service name and the port passed in
+    #
+    # So basically:
+    # - success is when both service and port are set
+    # - if only service set, no port could be found
+    # - if only port set, it's a port conflict
+    #
+    def LookupService(self, serviceOrPort):
+        service = None
+        port    = None
+        
+        if not serviceOrPort.isdigit():
+            if serviceOrPort in self.service__data:
+                data = self.service__data[serviceOrPort]
+                
+                service = serviceOrPort
+                port    = data["port"]
+            else:
+                service = serviceOrPort
+        else:
+            for tmpService in self.service__data.keys():
+                data = self.service__data[tmpService]
+                tmpPort = data["port"]
+                
+                if tmpPort == serviceOrPort:
+                    port = tmpPort
+            
+            if not port:
+                service = "SERVICE:%s" % serviceOrPort
+                port    = serviceOrPort
+    
+        return service, port
+
+    def GetServiceAddr(self, service):
+        addr = None
+        
+        if service in self.service__data:
+            data = self.service__data[service]
+            addr = "ws://" + data["host"] + ":" + data["port"] + data["wsPath"]
+        
+        return addr
 
 
-
-
-
-
-
-
+    def GetServiceData(self, service):
+        data = None
+        
+        if service in self.service__data:
+            data = self.service__data[service]
+            
+        return data
 
 
 
