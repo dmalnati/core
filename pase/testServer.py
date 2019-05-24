@@ -37,14 +37,27 @@ class App(WSApp):
     def OnWebSocketConnectedInbound(self, ws):
         Log("OnWebSocketConnectedInbound")
 
-    def OnWebSocketReadable(self, ws, userData):
-        msg = ws.Read()
-        Log("Got msg: %s" % msg)
+    def OnWebSocketReadable(self, ws):
+        jsonObj = json.loads(ws.Read())
+        
+        Log("Got data, distributing")
+        print(json.dumps(jsonObj,
+                         sort_keys=True,
+                         indent=4,
+                         separators=(',', ': ')))
+        
+        line = jsonObj["LINE"]
+        
+        for wsIn in self.GetWebSocketInboundList():
+            wsIn.Write(json.dumps({
+                "MESSAGE_TYPE"       : "A_MSG_DISTRIBUTED",
+                "LINE"               : line,
+            }))
 
-    def OnWebSocketClosed(self, ws, userData):
+    def OnWebSocketClosed(self, ws):
         Log("WS Closed")
 
-    def OnWebSocketError(self, ws, userData):
+    def OnWebSocketError(self, ws):
         Log("WebSocketError: Why did this happen?")
 
 

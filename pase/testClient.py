@@ -16,6 +16,7 @@ class App(WSApp):
         WSApp.__init__(self)
 
         self.connectTo = serviceOrAddrOrPort
+        self.ws        = None
         
     def Run(self):
         service, port = self.GetServiceAndPort()
@@ -25,29 +26,48 @@ class App(WSApp):
             self.Connect(self.connectTo)
             
             Log("Running")
+            
+            WatchStdinLinesEndLoopOnEOF(self.OnKeyboardInput)
+            
             evm_MainLoop()
             
         else:
             Log("Not OK, quitting")
             
+            
+    def OnKeyboardInput(self, line):
+        if self.ws:
+            self.ws.Write(json.dumps({
+                "MESSAGE_TYPE"       : "A_LINE",
+                "LINE"               : line,
+            }))
+    
     ######################################################################
     #
     # Implementing WSNodeMgr Events
     #
     ######################################################################
 
-    def OnWebSocketConnectedInbound(self, ws):
-        Log("OnWebSocketConnectedInbound")
+    def OnWebSocketConnectedOutbound(self, ws):
+        self.ws = ws
+        Log("OnWebSocketConnectedOutbound")
 
-    def OnWebSocketReadable(self, ws, userData):
-        msg = ws.Read()
-        Log("Got msg: %s" % msg)
+    def OnWebSocketReadable(self, ws):
+        jsonObj = json.loads(ws.Read())
+        
+        Log("Got data")
+        print(json.dumps(jsonObj,
+                         sort_keys=True,
+                         indent=4,
+                         separators=(',', ': ')))
+        
 
-    def OnWebSocketClosed(self, ws, userData):
+    def OnWebSocketClosed(self, ws):
+        self.ws = None
         Log("WS Closed")
 
-    def OnWebSocketError(self, ws, userData):
-        Log("WebSocketError: Why did this happen?")
+    def OnWebSocketError(self, ws):
+        Log("Couldn't connect")
 
 
 
