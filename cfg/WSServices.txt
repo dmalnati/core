@@ -1,6 +1,0 @@
-# format:
-# <service> <port>
-
-
-#TEST_SERVICE localhost 1234 /ws
-TEST_SERVICE 127.0.0.1 1234 /ws
