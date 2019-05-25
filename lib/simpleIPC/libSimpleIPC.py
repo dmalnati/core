@@ -10,8 +10,8 @@ from struct import *
 from collections import deque
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', ''))
-from myLib.utl import *
-from myLib.rfLink import *
+from lib.utl import *
+from lib.rfLink import *
 
 
 class SimpleIPCMessage(object):

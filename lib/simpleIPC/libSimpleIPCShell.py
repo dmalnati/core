@@ -4,8 +4,8 @@ import sys
 import os
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', ''))
-from myLib.utl import *
-from myLib.simpleIPC import *
+from lib.utl import *
+from lib.simpleIPC import *
 
 
 #

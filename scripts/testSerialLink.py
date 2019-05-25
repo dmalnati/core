@@ -7,8 +7,8 @@ import time
 import pigpio
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', ''))
-from myLib.utl import *
-from myLib.serial import *
+from lib.utl import *
+from lib.serial import *
 
 
 class TestSerialLink():

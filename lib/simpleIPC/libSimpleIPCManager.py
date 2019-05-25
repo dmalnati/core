@@ -4,8 +4,8 @@ import sys
 import os
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', ''))
-from myLib.serial import *
-from myLib.rfLink import *
+from lib.serial import *
+from lib.rfLink import *
 from .libSimpleIPC import *
 from .libSimpleIPCShell import *
 

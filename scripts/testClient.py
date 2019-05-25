@@ -6,8 +6,8 @@ import os
 import json
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', ''))
-from myLib.utl import *
-from myLib.ws import *
+from lib.utl import *
+from lib.ws import *
 
 
 
