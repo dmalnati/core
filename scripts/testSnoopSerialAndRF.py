@@ -6,11 +6,10 @@ import time
 
 import pigpio
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', ''))
-from lib.utl import *
-from lib.serial import *
-from lib.rfLink import *
-from lib.simpleIPC import *
+from libCore import *
+from libSerialLink import *
+from libRFLink import *
+from libSimpleIPC import *
 
 
 

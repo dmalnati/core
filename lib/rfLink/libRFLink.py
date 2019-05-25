@@ -4,9 +4,6 @@ import sys
 import os
 import time
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', ''))
-from lib.utl import *
-from lib.serial import *
 
 
 class RFLinkHeader():

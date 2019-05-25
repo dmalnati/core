@@ -3,8 +3,6 @@ import os
 
 from collections import deque
 
-from libSimpleWsIface import *
-from ..utl import *
 
 
 

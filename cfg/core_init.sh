@@ -26,6 +26,17 @@ then
     export CC="$CORE/site-specific/cfg"
     export L="$CORE/runtime/logs"
     export GC="$CORE/generated-cfg"
+
+    # make hitting tab expand variables on command line
+    shopt -s direxpand
+
+
+    # setup python library paths
+    for dir in $(find "$CORE/core/lib" -type d)
+    do
+        [[ ":$PYTHONPATH:" =~ ":$dir:" ]] || PYTHONPATH="$dir:$PYTHONPATH"
+    done
+    export PYTHONPATH
 fi
 
 

@@ -4,7 +4,6 @@ import inspect
 import tornado.web
 import tornado.httpserver
  
-from ..utl import *
  
  
 #

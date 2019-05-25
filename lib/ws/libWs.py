@@ -388,66 +388,100 @@ class WSApp(WSNodeMgrEventHandlerIface, WSNodeMgr):
         WSNodeMgrEventHandlerIface.__init__(self)
         WSNodeMgr.__init__(self, self)
         
-        self.serviceOrPort = serviceOrPort
-        
         self.service__data = dict()
+        self.serviceData = None
+
         self.ok = self.ReadServiceDirectory()
-        
-        self.service = None
-        self.port    = None
-        if self.serviceOrPort:
-            self.service, self.port = self.LookupService(self.serviceOrPort)
-            
-            if self.service == None or self.port == None:
-                self.ok = None
+
+        # On startup, a WSApp will init.
+        # Servers will identify their service name or port.
+        # Clients won't.
+        #
+        # If we're a server, we want to identify our own service details so
+        # when the server tries to Listen later, it has its details sorted
+
+        if serviceOrPort:
+            # Maybe the name of a service
+            if not self.serviceData:
+                self.serviceData = self.LookupServiceByName(serviceOrPort)
+                
+            # Or maybe the port of a service
+            if not self.serviceData:
+                self.serviceData = self.LookupServiceByPort(serviceOrPort)
+
+            # Or maybe just a port not defined, so we make up an address
+            if not self.serviceData:
+                if serviceOrPort.isdigit():
+                    self.serviceData = \
+                        self.MakeServiceDataByPort(serviceOrPort)
         else:
-            self.service = "SERVICE_%s" % str(os.getpid())
+            self.serviceData = self.MakeServiceDataClient()
         
+
     def IsOk(self):
         return self.ok
+
+    def GetSelfServiceData(self):
+        return self.serviceData
         
-    def GetServiceAndPort(self):
-        return self.service, self.port
-        
+
     def Listen(self):
         if self.IsOk():
-            data = self.GetServiceData(self.service)
-            
-            self.listen(data["port"], data["wsPath"])
+            self.listen(self.serviceData["port"], self.serviceData["wsPath"])
+
     
     def Connect(self, serviceOrAddrOrPort):
         handle = None
+        addr   = None
         
-        isAddr = False
+        # Check first maybe it's an already-formed websocket address
         try:
             if serviceOrAddrOrPort.index("ws://") == 0:
-                isAddr = True
+                addr = serviceOrAddrOrPort
         except:
             pass
+
+        # Or maybe the name of a service
+        if not addr:
+            data = self.LookupServiceByName(serviceOrAddrOrPort)
             
-        if isAddr:
-            addr   = serviceOrAddrOrPort
+            if data:
+                addr = data["addr"]
+
+        # Or maybe the port of a service
+        if not addr:
+            data = self.LookupServiceByPort(serviceOrAddrOrPort)
+
+            if data:
+                addr = data["addr"]
+
+        # Or maybe just a port not defined, so we make up an address
+        if not addr:
+            if serviceOrAddrOrPort.isdigit():
+                addr = "ws://127.0.0.1:%s/ws" % serviceOrAddrOrPort
+            else:
+                pass
+
+        # Try to connect to whatever we came up with
+        if addr:
             handle = self.connect(addr)
-        else:
-            service, port = self.LookupService(serviceOrAddrOrPort)
-            
-            if service:
-                addr   = self.GetServiceAddr(service)
-                handle = self.connect(addr)
-            elif port:
-                addr   = "ws://127.0.0.1:%s/ws" % port
-                handle = self.connect(addr)
             
         return handle
     
+
     def ReadServiceDirectory(self):
         ok = True
-        
-        with open('WSServices.txt', 'r') as file:
+
+        core = os.environ["CORE"]
+        serviceFile = core + "/generated-cfg/WSServices.txt"
+
+        with open(serviceFile, 'r') as file:
             fileData = file.read().rstrip('\n')
         
             lineList = fileData.split("\n")
             
+            port__seen = dict()
+
             for line in lineList:
                 line = line.strip()
                 
@@ -466,58 +500,70 @@ class WSApp(WSNodeMgrEventHandlerIface, WSNodeMgr):
                                 "host"    : host,
                                 "port"    : port,
                                 "wsPath"  : wsPath,
-                                "addr"    : "ws://" + host + ":" + port + wsPath,
+                                "addr"    : "ws://" + host + ":" + \
+                                            port + wsPath,
                             }
                             
                             if service in self.service__data:
                                 ok = False
+                            elif port in port__seen:
+                                ok = False
                             else:
                                 self.service__data[service] = data
+                                port__seen[port] = 1
         
         return ok
-    
-    # pass in either a service name or port
-    #
-    # if service name:
-    #   and found -- return set service and port
-    #   not found -- service is set
-    #
-    # if port:
-    #   and found -- bad, that's a clash
-    #     return service name = None, port = port
-    #   not found -- good, not a clash
-    #     return synthetic service name and the port passed in
-    #
-    # So basically:
-    # - success is when both service and port are set
-    # - if only service set, no port could be found
-    # - if only port set, it's a port conflict
-    #
-    def LookupService(self, serviceOrPort):
+
+
+    def MakeServiceDataByPort(self, port):
+        data = dict()
+
+        data["service"] = "SERVICE_%s:%s" % (str(os.getpid()), port)
+        data["host"]    = "127.0.0.1"
+        data["port"]    = port
+        data["wsPath"]  = "/ws"
+        data["addr"]    = "ws://" + data["host"] + ":" + \
+                          data["port"] + data["wsPath"]
+
+        return data
+
+    def MakeServiceDataClient(self):
+        data = dict()
+
+        data["service"] = "SERVICE_%s" % (str(os.getpid()))
+        data["host"]    = "127.0.0.1"
+        data["port"]    = "NA"
+        data["wsPath"]  = "NA"
+        data["addr"]    = "ws://" + data["host"] + ":" + \
+                          data["port"] + data["wsPath"]
+
+        return data
+
+
+    def LookupServiceByName(self, service):
+        data = None
+
+        if service in self.service__data:
+            data = self.service__data[service]
+
+        return data
+
+
+    def LookupServiceByPort(self, portSearch):
+        data = None
+
         service = None
         port    = None
         
-        if not serviceOrPort.isdigit():
-            if serviceOrPort in self.service__data:
-                data = self.service__data[serviceOrPort]
-                
-                service = serviceOrPort
-                port    = data["port"]
-            else:
-                service = serviceOrPort
-        else:
-            for tmpService in self.service__data.keys():
-                data = self.service__data[tmpService]
-                tmpPort = data["port"]
-                
-                if tmpPort == serviceOrPort:
-                    port = tmpPort
+        for service in self.service__data.keys():
+            tmpData = self.service__data[service]
+            tmpPort = tmpData["port"]
             
-            if not port:
-                service = "SERVICE:%s" % serviceOrPort
-                port    = serviceOrPort
-    
-        return service, port
+            if tmpPort == portSearch:
+                data = tmpData
+            
+        return data
+
 
     def GetServiceAddr(self, service):
         addr = None

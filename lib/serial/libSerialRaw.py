@@ -6,8 +6,7 @@ import time
 
 import pigpio
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', ''))
-from lib.utl import *
+from libEvm import *
 
 
 class SerialRaw():

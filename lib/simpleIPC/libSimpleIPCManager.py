@@ -3,11 +3,6 @@
 import sys
 import os
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', ''))
-from lib.serial import *
-from lib.rfLink import *
-from .libSimpleIPC import *
-from .libSimpleIPCShell import *
 
 
 

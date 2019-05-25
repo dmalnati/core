@@ -1,14 +1,9 @@
-#!/usr/bin/python
+#!/usr/bin/python -u
 
 import sys
 import os
 
-import json
-
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', ''))
-from lib.utl import *
-from lib.ws import *
-
+from libCore import *
 
 
 class App(WSApp):
@@ -19,16 +14,15 @@ class App(WSApp):
         self.ws        = None
         
     def Run(self):
-        service, port = self.GetServiceAndPort()
-        Log("%s : %s" % (service, port))
+        data = self.GetSelfServiceData()
+        Log("%s : %s" % (data["service"], data["port"]))
 
         if self.IsOk():
             self.Connect(self.connectTo)
             
-            Log("Running")
-            
             WatchStdinLinesEndLoopOnEOF(self.OnKeyboardInput)
             
+            Log("Running")
             evm_MainLoop()
             
         else:

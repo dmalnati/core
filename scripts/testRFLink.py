@@ -6,9 +6,8 @@ import time
 
 import pigpio
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', ''))
-from lib.utl import *
-from lib.rfLink import *
+from libCore import *
+from libRFLink import *
 
 
 class TestRFLink():
