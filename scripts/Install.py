@@ -3,9 +3,9 @@
 
 import os
 import sys
-import shutil
 
-from shutil import copyfile
+
+
 
 #
 # Two modes of operation
@@ -27,6 +27,7 @@ NON_PRODUCT_SUBDIR_LIST = [
     "/site-specific/cfg",
     "/runtime",
     "/runtime/logs",
+    "/runtime/logs/currentRun",
     "/runtime/working",
 ]
 
@@ -88,8 +89,7 @@ def SetupDirectories():
         for directory in directoryList:
             Log(directory)
 
-            if not os.path.exists(directory):
-                os.makedirs(directory)
+            SafeMakeDir(directory)
 
         retVal = True
     except:
@@ -102,62 +102,6 @@ def SetupDirectories():
 
     return retVal
 
-
-def SafeCopyFileIfExists(srcFile, dstFile):
-    retVal = True
-
-    if os.path.isfile(srcFile):
-        try:
-            copyfile(srcFile, dstFile)
-        except:
-            retVal = False
-
-    return retVal
-    
-
-def RemoveDir(directory):
-    if os.path.isdir(directory):
-        shutil.rmtree(directory)
-
-def MakeDir(directory):
-    os.makedirs(directory)
-
-
-def DeleteFilesInDir(directory):
-    retVal = True
-
-    for f in os.listdir(directory):
-        try:
-            fFullPath = directory + "/" + f
-            if os.path.isfile(fFullPath):
-                os.unlink(fFullPath)
-        except:
-            retVal = False
-
-    return retVal
-
-
-def CopyFiles(srcDir, dstDir, verbose = False):
-    retVal = True
-
-    if os.path.isdir(srcDir):
-        for f in os.listdir(srcDir):
-            if f[0] != '.':
-                fFullPath = srcDir + "/" + f
-
-                if os.path.isfile(fFullPath):
-                    srcFile = fFullPath
-                    dstFile = dstDir + "/" + f
-
-                    if SafeCopyFileIfExists(srcFile, dstFile):
-                        if verbose:
-                            Log(srcFile + " -> ")
-                            Log(dstFile)
-                            Log("")
-                    else:
-                        retVal = False
-
-    return retVal
 
 
 def MergeProductFilesToMaster(directory, fileSuffix, fileOut):
@@ -240,7 +184,7 @@ def GenerateConfig():
     tmpDir = core + "/generated-cfg/tmp"
     Log("Creating temporary folder %s" % tmpDir)
     RemoveDir(tmpDir)
-    MakeDir(tmpDir)
+    SafeMakeDir(tmpDir)
 
     # Do file copies
     Log("Creating temporary file set")

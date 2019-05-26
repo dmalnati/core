@@ -8,6 +8,28 @@ import time
 from libCore import *
 
 
+def Archive(timeOfCurrentState):
+    archiveDir = timeOfCurrentState
+    archiveDir = archiveDir.replace("-", "_")
+    archiveDir = archiveDir.replace(" ", "__")
+    archiveDir = archiveDir.replace(":", "_")
+
+    # Archive logs
+    srcDir = CorePath("/runtime/logs")
+    dstDir = CorePath("/archive/" + archiveDir + "/logs")
+
+    SafeRecursiveDirectoryCopy(srcDir, dstDir)
+    DeleteFilesInDir(srcDir)
+    DeleteFilesInDir(srcDir + "/currentRun")
+
+    # Keep a record of the generated config at the time
+    srcDir = CorePath("/generated-cfg")
+    dstDir = CorePath("/archive/" + archiveDir + "/generated-cfg")
+    SafeRecursiveDirectoryCopy(srcDir, dstDir)
+
+
+
+
 def Main():
     retVal = False
 
@@ -39,6 +61,8 @@ def Main():
             print("Force closing despite state %s not being STARTED" % state)
 
         if close:
+            timeOfCurrentState = ss.GetTimeOfLastChange()
+
             ss.SetState("CLOSING")
 
             print("Closing all running services")
@@ -54,6 +78,8 @@ def Main():
                     retVal = True
 
             ss.SetState("CLOSED")
+
+            Archive(timeOfCurrentState)
         else:
             print("State %s, needs to be STARTED, quitting" % state)
 

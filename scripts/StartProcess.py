@@ -7,6 +7,15 @@ import sys
 from libCore import *
 
 
+def MoveOldLogFiles(service):
+    pathFrom = CorePath("/runtime/logs")
+    pathTo   = CorePath("/runtime/logs/currentRun")
+
+    for srcFile in Glob(pathFrom + "/" + service + ".*"):
+        filePart = FilePart(srcFile)
+        SafeMoveFileIfExists(srcFile, pathTo + "/" + filePart)
+    
+
 def Main():
     retVal = False
 
@@ -18,6 +27,8 @@ def Main():
 
     if RunInfo.ServiceExists(service):
         if not RunInfo.ServiceIsRunning(service):
+            MoveOldLogFiles(service)
+
             try:
                 subprocess.check_call(("Run.py "+ service).split())
 

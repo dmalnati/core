@@ -17,7 +17,7 @@ def ActuallyRun(service, cmd):
     # Determine log file name
     core = os.environ["CORE"]
     logFileName  = core + "/runtime/logs/"
-    logFileName += service + "_"
+    logFileName += service + "."
     logFileName += datetime.datetime.now().strftime("%Y_%m_%d__%H_%M_%S")
     logFileName += ".txt"
 
