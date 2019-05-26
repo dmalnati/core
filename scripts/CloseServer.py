@@ -15,21 +15,51 @@ def Main():
         print("Usage: %s" %  os.path.basename(sys.argv[0]))
         sys.exit(-1)
 
+    forceFlag = False
+    if len(sys.argv) >= 2:
+        if sys.argv[1] == "--force":
+            forceFlag = True
+
     service__serviceDetail = RunInfo.GetServiceMap()
 
     serviceList = service__serviceDetail.keys()
     serviceList.sort()
 
-    print("Closing all running services")
-    for service in serviceList:
-        if RunInfo.ServiceIsRunning(service):
-            try:
-                subprocess.check_call(("KillProcess.py " + service).split())
-                retVal = True
-            except Exception as e:
-                retVal = False
+    ss = ServerState()
+
+    if ss.GetStateLock():
+        state = ss.GetState()
+
+        close = False
+        if state == "STARTED":
+            close = True
+
+        if not close and forceFlag:
+            close = True
+            print("Force closing despite state %s not being STARTED" % state)
+
+        if close:
+            ss.SetState("CLOSING")
+
+            print("Closing all running services")
+            for service in serviceList:
+                if RunInfo.ServiceIsRunning(service):
+                    try:
+                        cmd = "KillProcess.py " + service
+                        subprocess.check_call(cmd.split())
+                        retVal = True
+                    except Exception as e:
+                        retVal = False
+                else:
+                    retVal = True
+
+            ss.SetState("CLOSED")
         else:
-            retVal = True
+            print("State %s, needs to be STARTED, quitting" % state)
+
+        ss.ReleaseStateLock()
+    else:
+        print("State locked, operation in progress elsewhere, quitting")
 
     print("Done")
 

@@ -27,6 +27,7 @@ NON_PRODUCT_SUBDIR_LIST = [
     "/site-specific/cfg",
     "/runtime",
     "/runtime/logs",
+    "/runtime/working",
 ]
 
 
@@ -296,14 +297,50 @@ def Main():
         if len(sys.argv) == 2 and sys.argv[1] == "-getProductDirListReversed":
             print(" ".join(GetProductDirectoryListReversed()))
         else:
+            forceFlag = False
+            if len(sys.argv) == 2 and sys.argv[1] == "--force":
+                forceFlag = True
 
-            retValSD = SetupDirectories()
-            Log("")
-            retValGC = GenerateConfig()
+            ss = ServerState()
 
-            Log("DONE")
+            # check if state lock acquired, allow force
+            movePastLock = True
+            if not ss.GetStateLock():
+                movePastLock = False
 
-            retVal = retValSD and retValGC
+                if forceFlag:
+                    movePastLock = True
+                    Log("Force installing despite not acquiring lock")
+
+            if movePastLock:
+                state = ss.GetState()
+
+                # check if state correct, allow force
+                movePastState = True
+                if not state == "CLOSED":
+                    movePastState = False
+
+                    if forceFlag:
+                        movePastState = True
+                        Log("Force installing despite state %s "
+                            "not being CLOSED" % state)
+
+                if movePastState:
+                    retValSD = SetupDirectories()
+                    Log("")
+                    retValGC = GenerateConfig()
+
+                    Log("DONE")
+
+                    retVal = retValSD and retValGC
+                else:
+                    Log("State %s, needs to be CLOSED, quitting" % state)
+                    retVal = False
+
+                ss.ReleaseStateLock()
+            else:
+                Log("State locked, operation in progress elsewhere, quitting")
+                retVal = False
 
 
     return retVal == False

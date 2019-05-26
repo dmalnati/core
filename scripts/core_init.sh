@@ -30,6 +30,8 @@ then
     do
         scriptDir="$dir/scripts"
         [[ ":$PATH:" =~ ":$scriptDir:" ]] || PATH="$scriptDir:$PATH"
+        testDir="$dir/test"
+        [[ ":$PATH:" =~ ":$testDir:" ]] || PATH="$testDir:$PATH"
     done
     export PATH
 

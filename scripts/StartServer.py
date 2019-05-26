@@ -20,17 +20,34 @@ def Main():
     serviceList = service__serviceDetail.keys()
     serviceList.sort()
 
-    print("Starting all services")
-    for service in serviceList:
-        if not RunInfo.ServiceIsRunning(service):
-            try:
-                subprocess.check_call(("StartProcess.py " + service).split())
-                retVal = True
-            except Exception as e:
-                retVal = False
+    ss = ServerState()
+
+    if ss.GetStateLock():
+        state = ss.GetState()
+
+        if state == "CLOSED":
+            ss.SetState("STARTING")
+
+            print("Starting all services")
+            for service in serviceList:
+                if not RunInfo.ServiceIsRunning(service):
+                    try:
+                        cmd = "StartProcess.py " + service
+                        subprocess.check_call(cmd.split())
+                        retVal = True
+                    except Exception as e:
+                        retVal = False
+                else:
+                    print("Service %s already running, no action taken" % service)
+                    retVal = True
+
+            ss.SetState("STARTED")
         else:
-            print("Service %s already running, no action taken" % service)
-            retVal = True
+            print("State %s, needs to be CLOSED, quitting" % state)
+
+        ss.ReleaseStateLock()
+    else:
+        print("State locked, operation in progress elsewhere, quitting")
 
     print("Done")
 

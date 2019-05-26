@@ -14,8 +14,17 @@ def Mon():
 
     serviceList = service__serviceDetail.keys()
     serviceList.sort()
-    
+
+    state         = ServerState().GetState()
+    stateDuration = ServerState().GetDurationOfCurrentStateFormatted()
+
     subprocess.call("tput clear".split())
+
+    
+    print("State: %s (for %s)" % (state, stateDuration))
+    print("")
+
+    print("%6s %6s %6s    %-25s %-s" % ("pid", "cpu", "mem", "service", "desc"))
     for service in serviceList:
         serviceDetail = service__serviceDetail[service]
         process       = service__process[service]

@@ -43,6 +43,8 @@ def DateTimeStrDiffSec(dtStr1, dtStr2):
     
     return secDiff
     
+def SecsToDuration(secs):
+    return str(datetime.timedelta(seconds=secs))
     
 logDateAlso = False
 
