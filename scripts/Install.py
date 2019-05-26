@@ -154,7 +154,7 @@ def ApplySysDefSubstitution(tmpDir):
         "SystemDefinition.master.json"
     ]
 
-    for file in Glob(tmpDir + "/*.json"):
+    for file in Glob(tmpDir + "/*"):
         filePartList = file.split("_")
 
         if filePartList[-1] not in fileListSuffixNoSub:
@@ -263,20 +263,84 @@ def MergeProcessDetails(directory, fileSuffix, fileOut):
 # expected output format:
 # <service> <host> <port> <wsPath>
 def GenerateWSServices(directory):
+    basePort = int(SysDef.Get("CORE_BASE_PORT"))
+
     cfgReader = ConfigReader()
     srcFile   = directory + "/ProcessDetails.master.json"
     cfg       = cfgReader.ReadConfigOrAbort(srcFile)
 
-    fFullPath = directory + "/" + "WSServices.txt"
-    with open(fFullPath, 'w') as file:
-        for processDetail in cfg["processDetailsList"]:
-            entry  = ""
-            entry +=       processDetail["name"]
-            entry += " " + "127.0.0.1"
-            entry += " " + str(1024 + int(str(processDetail["id"])))
-            entry += " " + "/ws"
+    try:
+        fFullPath = directory + "/" + "WSServices.txt"
+        with open(fFullPath, 'w') as file:
 
-            file.write(entry + "\n")
+            file.write("\n\n")
+            file.write("#######################################\n")
+            file.write("# Auto-generated\n")
+            file.write("#######################################\n")
+            file.write("\n")
+
+
+            # only processes which have a specific need for a port will be given
+            # the one they want.
+            # everything else will be auto-applied.
+
+            port__reservedBy = dict()
+            for processDetail in cfg["processDetailsList"]:
+                if "port" in processDetail:
+                    name = processDetail["name"]
+                    port = processDetail["port"]
+                    
+                    if port in port__reservedBy:
+                        Log("Error: ID %s reserved by %s, also by %s" %
+                            (port, port__reservedBy[port], name))
+                        sys.exit(1)
+
+                    port__reservedBy[port] = name
+
+            # auto-generate
+            portAssignNext = basePort
+            for processDetail in cfg["processDetailsList"]:
+                if "port" in processDetail:
+                    portAssign = int(processDetail["port"])
+                else:
+                    while portAssignNext in port__reservedBy:
+                        portAssignNext += 1
+
+                    portAssign = portAssignNext
+                    portAssignNext += 1
+
+                entry  = ""
+                entry +=       processDetail["name"]
+                entry += " " + "127.0.0.1"
+                entry += " " + str(portAssign)
+                entry += " " + "/ws"
+
+                file.write(entry + "\n")
+                file.write("\n")
+
+            # copy in contents from product files
+            productList = GetProductList()
+            srcFileList = []
+
+            # find all product files which match the file suffix
+            for product in productList:
+                fFullPath = directory + "/" + product + "_" + "WSServices.txt"
+
+                if os.path.isfile(fFullPath):
+                    file.write("\n")
+                    file.write("#######################################\n")
+                    file.write("# From product %s\n" % product)
+                    file.write("#######################################\n")
+
+                    with open(fFullPath) as fileProduct:
+                        buf = fileProduct.read()
+                        fileProduct.close()
+
+                        file.write(buf)
+                        file.write("\n")
+
+    except Exception as e:
+        Log("Couldn't generate WSServices: %s" % e)
 
 
 def GenerateConfig():
