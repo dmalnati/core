@@ -81,7 +81,7 @@ class TestRFLink():
 def Main():
     if len(sys.argv) != 7:
         print("Usage: " +
-              sys.argv[0] +
+              os.path.basename(sys.argv[0]) +
               " <bcPinRx> <bcPinTx> <realm> <srcAddr> <dstAddr> <protocolId>")
         sys.exit(-1)
 

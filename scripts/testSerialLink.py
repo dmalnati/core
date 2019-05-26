@@ -42,7 +42,7 @@ class TestSerialLink():
 
 def Main():
     if len(sys.argv) != 3 and len(sys.argv) != 4:
-        print("Usage: " + sys.argv[0] + " <bcPinRx> <bcPinTx> [-v]")
+        print("Usage: " + os.path.basename(sys.argv[0]) + " <bcPinRx> <bcPinTx> [-v]")
         sys.exit(-1)
 
     bcPinRx = int(sys.argv[1])

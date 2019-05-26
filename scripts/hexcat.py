@@ -102,7 +102,7 @@ def SetupSignalHandler():
 
 def Main():
     if len(sys.argv) != 2:
-        print("Usage: " + sys.argv[0] + " <file>")
+        print("Usage: " + (os.path.basename(sys.argv[0]) + " <file>")
         print("    use '-' for stdin")
         sys.exit(-1)
 

@@ -4,6 +4,7 @@ import signal
 import sys
 import time
 
+from libUtl import *
 
 import tornado.ioloop
 from tornado import gen
@@ -35,6 +36,12 @@ def evm_MainLoop(stopOnCtlC=True):
             evm_MainLoopFinish()
 
         signal.signal(signal.SIGINT, SignalHandler)
+
+    def SignalHandlerTerm(signal, frame):
+        Log("Terminated, quitting")
+        evm_MainLoopFinish()
+
+    signal.signal(signal.SIGTERM, SignalHandlerTerm)
 
     tornado.ioloop.IOLoop.instance().start()
 

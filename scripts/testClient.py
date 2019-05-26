@@ -67,7 +67,7 @@ class App(WSApp):
 
 def Main():
     if len(sys.argv) < 2 or (len(sys.argv) >= 2 and sys.argv[1] == "--help"):
-        print("Usage: %s <serviceOrAddrOrPort>" % (sys.argv[0]))
+        print("Usage: %s <serviceOrAddrOrPort>" % (os.path.basename(sys.argv[0])))
         sys.exit(-1)
 
     serviceOrAddrOrPort = sys.argv[1]

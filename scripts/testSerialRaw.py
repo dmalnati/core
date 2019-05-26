@@ -156,7 +156,7 @@ def Main():
 
     if len(argList) < 2 or len(argList) > 4:
         print("Usage: "   +
-              sys.argv[0] +
+              os.path.basename(sys.argv[0]) +
               " <bcPinRx> [<bcPinTx=->] [<baud=9600>] [-ntor]")
         print("    bcPinRx can be - if not in use (write only)")
         print("    bcPinTx can be - if not in use (read only)")

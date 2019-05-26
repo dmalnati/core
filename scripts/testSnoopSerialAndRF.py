@@ -163,7 +163,7 @@ class Snoop():
 
 def Main():
     if len(sys.argv) != 3:
-        print("Usage: " + sys.argv[0] + " <bcPinSnoopRx> <bcPinSnoopTx>")
+        print("Usage: " + os.path.basename(sys.argv[0]) + " <bcPinSnoopRx> <bcPinSnoopTx>")
         sys.exit(-1)
 
     bcPinSnoopRx = int(sys.argv[1])
