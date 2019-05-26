@@ -1,4 +1,5 @@
 import os
+import sys
 
 import json
 
@@ -17,9 +18,18 @@ class ConfigReader():
     def IsOk(self):
         return self.cfg != None
 
+    def ReadConfigOrAbort(self, cfgName, verbose = False):
+        cfg = self.ReadConfig(cfgName, verbose)
+
+        if cfg == None:
+           Log("Could not read %s: %s" % (cfgName, self.GetLastError())) 
+           sys.exit(1)
+
+        return cfg
 
     def ReadConfig(self, cfgName, verbose = False):
         cfgFile = None
+        jsonObj = None
 
         # if absolute path, try that file
         # otherwise go through search path
@@ -33,6 +43,10 @@ class ConfigReader():
 
             if os.path.isfile(cfgName):
                 cfgFile = cfgName
+            else:
+                self.e = "%s is not a file or non-existant" % cfgName
+                if verbose:
+                    Log(self.e)
         else:
             if verbose:
                 Log("%s is relative" % cfgName)
@@ -72,7 +86,6 @@ class ConfigReader():
             except:
                 pass
 
-            jsonObj = None
             try:
                 jsonObj = json.loads(fileData)
 
@@ -90,6 +103,7 @@ class ConfigReader():
         self.cfg = jsonObj
 
         return self.cfg
+
 
     def GetLastError(self):
         return self.e

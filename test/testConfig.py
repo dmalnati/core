@@ -14,7 +14,7 @@ def Main():
     cfgFile = sys.argv[1]
 
     cfgReader = ConfigReader()
-    cfg = cfgReader.ReadConfig(cfgFile, verbose=True)
+    cfg = cfgReader.ReadConfigOrAbort(cfgFile, verbose=True)
 
 
 Main()

@@ -21,25 +21,28 @@ class RunInfo():
     def GetProcessTable():
         processList = []
 
-        user = RunInfo.GetUser()
-        output = \
-            subprocess.check_output(['ps',
-                                     '-U', user,
-                                     '-o', 'ppid,pid,%cpu,%mem,cmd']).strip()
-        lineList = output.split("\n")
+        try:
+            user = RunInfo.GetUser()
+            output = \
+                subprocess.check_output(['ps',
+                                         '-U', user,
+                                         '-o', 'ppid,pid,%cpu,%mem,cmd']).strip()
+            lineList = output.split("\n")
 
-        # ignore the header line
-        for line in lineList[1:]:
-            linePartList = line.split()
+            # ignore the header line
+            for line in lineList[1:]:
+                linePartList = line.split()
 
-            process = dict()
-            process["PPID"] = linePartList[0]
-            process["PID"]  = linePartList[1]
-            process["CPU"]  = linePartList[2]
-            process["MEM"]  = linePartList[3]
-            process["CMD"]  = " ".join(linePartList[4:])
+                process = dict()
+                process["PPID"] = linePartList[0]
+                process["PID"]  = linePartList[1]
+                process["CPU"]  = linePartList[2]
+                process["MEM"]  = linePartList[3]
+                process["CMD"]  = " ".join(linePartList[4:])
 
-            processList.append(process)
+                processList.append(process)
+        except:
+            pass
 
         return processList
 

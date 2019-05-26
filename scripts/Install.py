@@ -1,6 +1,7 @@
 #!/usr/bin/python -u
 
 
+import re
 import os
 import sys
 
@@ -63,6 +64,9 @@ def GetProductList():
 
     return productList
 
+def GetProductListReversed():
+    return GetProductList()[::-1]
+
 def GetProductDirectoryListReversed():
     return GetProductDirectoryList()[::-1]
 
@@ -104,7 +108,113 @@ def SetupDirectories():
 
 
 
-def MergeProductFilesToMaster(directory, fileSuffix, fileOut):
+
+def DoSysDefSubstitution(file, cfg):
+    try:
+        fdIn = open(file, "r")
+        buf = fdIn.read()
+        fdIn.close()
+
+        matchList = re.findall(r"%(.*?)%", buf)
+
+        if len(matchList):
+            matchList.sort()
+
+            Log("")
+            Log("%s ->" % file)
+            Log("%s.presysdef" % file)
+            didMatch = False
+            for match in matchList:
+                if match in cfg:
+                    didMatch = True
+                    val = cfg[match]
+                    buf = buf.replace("%%%s%%" % (match), val)
+                    Log("  %%%s%% -> \"%s\"" % (match, val))
+                else:
+                    Log("  %%%s%% -> [NO VALUE FOUND]" % match)
+
+            SafeCopyFileIfExists(file, file + ".presysdef")
+            fd = open(file, "w")
+            fd.write(buf)
+            fd.close()
+
+    except Exception as e:
+        Log("Failed to do substitution for %s: %s" % (file, e))
+        sys.exit(1)
+
+
+
+
+def ApplySysDefSubstitution(tmpDir):
+    srcFile = tmpDir + "/SystemDefinition.master.json"
+    cfg     = ConfigReader().ReadConfigOrAbort(srcFile)
+
+    fileListSuffixNoSub = [
+        "SystemDefinition.json"
+        "SystemDefinition.master.json"
+    ]
+
+    for file in Glob(tmpDir + "/*.json"):
+        filePartList = file.split("_")
+
+        if filePartList[-1] not in fileListSuffixNoSub:
+            DoSysDefSubstitution(file, cfg)
+
+
+
+
+def MergeSysDefDetails(directory, fileSuffix, fileOut):
+    productList = GetProductListReversed()
+    srcFileList = []
+
+    # find all product files which match the file suffix
+    for product in productList:
+        fFullPath = directory + "/" + product + "_" + fileSuffix
+
+        if os.path.isfile(fFullPath):
+            srcFileList.append(fFullPath)
+
+    # add the master SysDef also
+    fFullPath = directory + "/" + fileSuffix
+
+    if os.path.isfile(fFullPath):
+        srcFileList.append(fFullPath)
+
+    # start crafting combined file
+    cfgReader = ConfigReader()
+
+    dataOut  = ""
+    dataOut += "{"
+
+    # read in all the process details entries and merge to one master
+    sep = ""
+    for srcFile in srcFileList:
+        cfg = cfgReader.ReadConfigOrAbort(srcFile)
+
+        dataStr = json.dumps(cfg)
+        # the json will have starting { and } chars, so drop them, and combine
+        dataStr = dataStr[1:-1].strip()
+        if len(dataStr):
+            dataOut += sep + dataStr
+            sep = ","
+
+
+    dataOut += "}"
+
+    # prettify output
+    jsonObj = json.loads(dataOut)
+    dataOutFormated = (json.dumps(jsonObj,
+                                  sort_keys=True,
+                                  indent=4,
+                                  separators=(',', ': ')))
+
+    # write output file
+    fFullPath = directory + "/" + fileOut
+    with open(fFullPath, 'w') as file:
+        file.write(dataOutFormated)
+
+
+def MergeProcessDetails(directory, fileSuffix, fileOut):
     productList = GetProductList()
     srcFileList = []
 
@@ -125,12 +235,7 @@ def MergeProductFilesToMaster(directory, fileSuffix, fileOut):
         # read in all the process details entries and merge to one master
         sep = ""
         for srcFile in srcFileList:
-            cfg = cfgReader.ReadConfig(srcFile)
-
-            if not cfg:
-                Log("Could not read %s: %s" %
-                    (srcFile, cfgReader.GetLastError()))
-                sys.exit(1)
+            cfg = cfgReader.ReadConfigOrAbort(srcFile)
 
             processDetailList = cfg["processDetailsList"]
             for processDetail in processDetailList:
@@ -160,11 +265,7 @@ def MergeProductFilesToMaster(directory, fileSuffix, fileOut):
 def GenerateWSServices(directory):
     cfgReader = ConfigReader()
     srcFile   = directory + "/ProcessDetails.master.json"
-    cfg       = cfgReader.ReadConfig(srcFile)
-
-    if not cfg:
-        Log("Could not read %s: %s" % (srcFile, cfgReader.GetLastError()))
-        sys.exit(1)
+    cfg       = cfgReader.ReadConfigOrAbort(srcFile)
 
     fFullPath = directory + "/" + "WSServices.txt"
     with open(fFullPath, 'w') as file:
@@ -205,14 +306,24 @@ def GenerateConfig():
     retVal &= CopyFiles(core + "/site-specific/cfg", tmpDir, verbose=True)
 
     # Do file generation
+    Log("Generating SystemDefinition.master.json")
+    MergeSysDefDetails(tmpDir,
+                       "SystemDefinition.json",
+                       "SystemDefinition.master.json")
+    Log("")
+
+    Log("Applying SysDef substitutions")
+    ApplySysDefSubstitution(tmpDir)
+    Log("")
+
     Log("Generating ProcessDetials.master.json")
-    MergeProductFilesToMaster(tmpDir,
-                              "ProcessDetails.json",
-                              "ProcessDetails.master.json")
+    MergeProcessDetails(tmpDir,
+                        "ProcessDetails.json",
+                        "ProcessDetails.master.json")
+    Log("")
 
     Log("Generating WSServices.txt")
     GenerateWSServices(tmpDir)
-
     Log("")
 
 

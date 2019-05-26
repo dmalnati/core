@@ -61,7 +61,7 @@ class ServerState():
             state = fd.readline().strip()
 
             try:
-                close(fd)
+                fd.close()
             except:
                 pass
             
