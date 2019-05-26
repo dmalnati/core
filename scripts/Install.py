@@ -127,6 +127,11 @@ def MergeProductFilesToMaster(directory, fileSuffix, fileOut):
         for srcFile in srcFileList:
             cfg = cfgReader.ReadConfig(srcFile)
 
+            if not cfg:
+                Log("Could not read %s: %s" %
+                    (srcFile, cfgReader.GetLastError()))
+                sys.exit(1)
+
             processDetailList = cfg["processDetailsList"]
             for processDetail in processDetailList:
                 processDetailStr = json.dumps(processDetail)
@@ -154,8 +159,12 @@ def MergeProductFilesToMaster(directory, fileSuffix, fileOut):
 # <service> <host> <port> <wsPath>
 def GenerateWSServices(directory):
     cfgReader = ConfigReader()
-    cfg       = cfgReader.ReadConfig(directory + "/" + \
-                                     "ProcessDetails.master.json")
+    srcFile   = directory + "/ProcessDetails.master.json"
+    cfg       = cfgReader.ReadConfig(srcFile)
+
+    if not cfg:
+        Log("Could not read %s: %s" % (srcFile, cfgReader.GetLastError()))
+        sys.exit(1)
 
     fFullPath = directory + "/" + "WSServices.txt"
     with open(fFullPath, 'w') as file:

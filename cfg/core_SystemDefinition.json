@@ -1,0 +1,5 @@
+{
+    "CORE_BASE_PORT" : "1024"
+    ,
+    "CORE_DATABASE_RUNTIME_DIR" : "/run/shm"
+}

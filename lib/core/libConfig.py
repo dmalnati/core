@@ -7,6 +7,7 @@ from libCore import *
 
 class ConfigReader():
     def __init__(self):
+        self.e       = None
         self.cfg     = None
         self.jsonObj = None
 
@@ -71,19 +72,26 @@ class ConfigReader():
             except:
                 pass
 
-            jsonObj = json.loads(fileData)
+            jsonObj = None
+            try:
+                jsonObj = json.loads(fileData)
 
-            if verbose:
-                Log("Read:")
-                print(json.dumps(jsonObj,
-                                 sort_keys=True,
-                                 indent=4,
-                                 separators=(',', ': ')))
+                if verbose:
+                    Log("Read:")
+                    print(json.dumps(jsonObj,
+                                     sort_keys=True,
+                                     indent=4,
+                                     separators=(',', ': ')))
+            except Exception as e:
+                self.e = e
+                if verbose:
+                    Log("Could not read %s: %s" % (cfgFile, e))
 
         self.cfg = jsonObj
 
         return self.cfg
 
-
+    def GetLastError(self):
+        return self.e
 
 
