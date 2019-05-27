@@ -27,9 +27,8 @@ class ConfigReader():
 
         return cfg
 
-    def ReadConfig(self, cfgName, verbose = False):
+    def SelectConfigLocation(self, cfgName, verbose = False):
         cfgFile = None
-        jsonObj = None
 
         # if absolute path, try that file
         # otherwise go through search path
@@ -41,12 +40,13 @@ class ConfigReader():
             if verbose:
                 Log("%s is absolute" % cfgName)
 
-            if os.path.isfile(cfgName):
+            if FileExists(cfgName):
                 cfgFile = cfgName
             else:
                 self.e = "%s is not a file or non-existant" % cfgName
                 if verbose:
                     Log(self.e)
+
         else:
             if verbose:
                 Log("%s is relative" % cfgName)
@@ -62,7 +62,7 @@ class ConfigReader():
 
                     tmpCfgFile = path + "/" + cfgName
                     
-                    if os.path.isfile(tmpCfgFile):
+                    if FileExists(tmpCfgFile):
                         cfgFile = tmpCfgFile
 
                         cont = False
@@ -76,6 +76,14 @@ class ConfigReader():
 
                     if i == len(self.cfgPathList):
                         cont = False
+
+        return cfgFile
+
+    def ReadConfig(self, cfgName, verbose = False):
+        cfgFile = None
+        jsonObj = None
+
+        cfgFile = self.SelectConfigLocation(cfgName, verbose)
 
         if cfgFile:
             if verbose:
@@ -106,6 +114,18 @@ class ConfigReader():
         self.cfg = jsonObj
 
         return self.cfg
+
+    def CfgToStr(self, cfg):
+       return json.dumps(cfg,
+                         sort_keys=True,
+                         indent=4,
+                         separators=(',', ': '))
+
+    def CfgDump(self, cfg):
+        print(self.CfgToStr(cfg))
+
+    def Equal(self, cfg1, cfg2):
+        return self.CfgToStr(cfg1) == self.CfgToStr(cfg2)
 
 
     def GetLastError(self):

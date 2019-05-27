@@ -3,6 +3,7 @@ import os
 
 from libUtl import *
 from libCoreDir import *
+from libFilesystem import *
 from libLock import *
 
 
@@ -72,16 +73,8 @@ class ServerState():
 
 
     def GetTimeOfLastChange(self):
-        retVal = None
+        return GetFileModificationTimeFormatted(self.stateFile)
 
-        try:
-            unixTime = os.path.getmtime(self.stateFile)
-
-            retVal = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(unixTime))
-        except:
-            pass
-
-        return retVal
 
     def GetDurationOfCurrentStateSecs(self):
         retVal = 0

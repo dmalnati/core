@@ -20,6 +20,28 @@ def FileFullPath(file):
 def FileExists(file):
     return os.path.isfile(file)
 
+def GetFileModificationTime(file):
+    unixTime = 0
+
+    try:
+        unixTime = os.path.getmtime(file)
+    except:
+        pass
+
+    return unixTime
+
+def GetFileModificationTimeFormatted(file):
+    unixTime = GetFileModificationTime(file)
+
+    retVal = unixTime
+
+    try:
+        retVal = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(unixTime))
+    except:
+        pass
+
+    return retVal
+
 def SafeCopyFileIfExists(srcFile, dstFile):
     retVal = True
 

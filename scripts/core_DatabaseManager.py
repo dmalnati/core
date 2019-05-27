@@ -16,7 +16,7 @@ class App(WSApp):
         ok = self.IsOk()
 
         # check database config
-        ConfigReader().ReadConfigOrAbort("Dct.master.json")
+        ConfigReader().ReadConfigOrAbort(CorePath("/runtime/db/Dct.master.json"))
 
         if ok:
             # check if offline database exists, should thanks to Remap, or abort

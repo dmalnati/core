@@ -11,6 +11,7 @@ from libCore import *
 def RunRemap():
     retVal = True
 
+    Log("Running Remap.py")
     try:
         subprocess.check_call(("Remap.py").split())
     except Exception as e:
@@ -40,7 +41,7 @@ def Main():
             if RunRemap():
                 ss.SetState("STARTING")
 
-                print("Starting all services")
+                Log("Starting all services")
                 for service in serviceList:
                     if not RunInfo.ServiceIsRunning(service):
                         try:
@@ -50,20 +51,20 @@ def Main():
                         except Exception as e:
                             retVal = False
                     else:
-                        print("Service %s already running, no action taken" % service)
+                        Log("Service %s already running, no action taken" % service)
                         retVal = True
 
                 ss.SetState("STARTED")
             else:
-                print("Remap failed, quitting")
+                Log("Remap failed, quitting")
         else:
-            print("State %s, needs to be CLOSED, quitting" % state)
+            Log("State %s, needs to be CLOSED, quitting" % state)
 
         ss.ReleaseStateLock()
     else:
-        print("State locked, operation in progress elsewhere, quitting")
+        Log("State locked, operation in progress elsewhere, quitting")
 
-    print("Done")
+    Log("Done")
 
     return retVal == False
 

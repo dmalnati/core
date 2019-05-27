@@ -69,6 +69,7 @@ class Database():
         if dbPath:
             dbFullPath = dbPath
         
+        Log("Connecting to database %s" % dbFullPath)
         self.conn             = sqlite3.connect(dbFullPath)
         self.conn.row_factory = sqlite3.Row
         
@@ -302,7 +303,7 @@ class ManagedDatabase(Database, WSApp):
         self.ConnectToDatabaseManagerService()
 
     def OnDatabaseAvailable(self):
-        cfg = ConfigReader().ReadConfigOrAbort("Dct.master.json")
+        cfg = ConfigReader().ReadConfigOrAbort(CorePath("/runtime/db/Dct.master.json"))
         self.Connect()
         self.Init(cfg)
         
