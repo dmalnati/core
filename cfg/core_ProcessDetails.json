@@ -1,6 +1,12 @@
 {
     "processDetailsList" : [
         {
+            "name" : "CORE_DATABASE_MANAGER",
+            "desc" : "Database Manager",
+            "cmd"  : "core_DatabaseManager.py CORE_DATABASE_MANAGER"
+        }
+        ,
+        {
             "name" : "CORE_TEST_SERVER_1",
             "desc" : "Just a test server #1",
             "cmd"  : "testServer.py CORE_TEST_SERVER_1"

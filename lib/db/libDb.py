@@ -1,29 +1,125 @@
-import sqlite3
-
 import os
 import sys
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', ''))
-from myLib.utl import *
+from libUtl import *
+from libRun import *
+from libSysDef import *
+from libWs import *
 
+import sqlite3
+
+
+
+
+    
 
 class Database():
-    def __init__(self, databaseName):
-        self.databaseName = databaseName
+    def __init__(self):
+        self.e = None
         
-        self.conn = sqlite3.connect(self.databaseName)
+        self.tableName__table = dict()
         
-        self.conn.row_factory = sqlite3.Row
+        self.conn = None
         
         self.batchOn    = False
         self.batchCount = 0
+    
+    
+    def GetTableList(self):
+        tableList = self.tableName__table.keys()
+        tableList.sort()
         
+        return tableList
+        
+    def GetTable(self, tableName):
+        retVal = None
+        
+        if tableName in self.tableName__table:
+            retVal = self.tableName__table[tableName]
+        
+        return retVal
+    
+    
+    ######################################################################
+    #
+    # Private
+    #
+    ######################################################################
+    
+    @staticmethod
+    def GetDatabaseRunningFullPath():
+        dbDir      = SysDef.Get("CORE_DATABASE_RUNTIME_DIR", "/run/shm")
+        user       = RunInfo().GetUser()
+        dbFullPath = dbDir + "/" + user + "/database.db"
+        
+        return dbFullPath
+    
+    
+    @staticmethod
+    def GetDatabaseClosedFullPath():
+        dbFullPath = CorePath("/runtime/db/database.db")
+        
+        return dbFullPath
+        
+        
+    def Connect(self, dbPath = None):
+        retVal = True
+        
+        dbFullPath = Database.GetDatabaseRunningFullPath()
+        if dbPath:
+            dbFullPath = dbPath
+        
+        self.conn             = sqlite3.connect(dbFullPath)
+        self.conn.row_factory = sqlite3.Row
+        
+        return retVal
+    
+    
+    def Close(self):
+        if self.conn:
+            self.conn.close()
+    
+    
+    # Should only be called by ManagedDatabase or by
+    # apps not using ManagedDatabase but who want to use the library
+    def Init(self, cfg, verbose = False):
+        retVal = True
+        
+        dctTableList = cfg["tableList"]
+        
+        for dctTable in dctTableList:
+            tableName = dctTable["name"]
+            fieldList = dctTable["fieldList"]
+            uniqueKeyFieldList = dctTable["uniqueKeyFieldList"]
+            
+            indexList = []
+            if "indexList" in dctTable:
+                indexList = dctTable["indexList"]
+        
+            if tableName in self.tableName__table:
+                Log("Table % already defined" % tableName)
+                retVal = False
+                break
+
+            else:
+                if verbose:
+                    Log("Table %s" % tableName)
+                
+                self.CreateTable(tableName, fieldList, uniqueKeyFieldList, indexList)
+
+                table = Table(self, tableName, fieldList, uniqueKeyFieldList, indexList)
+                self.tableName__table[tableName] = table
+                
+        return retVal
+        
+        
+    
     # Deal with concurrency exceptions
     # basically, if the database is locked doing some other process' work, then
     # exceptions can get thrown after a timeout goes off.
     # I am not interested in this, so simply re-try until something other than
     # a timeout exception occurs.
-    def Execute(self, query, valList = []):
+    def Execute(self, query, valList = [], allowFail = False):
         c = self.conn.cursor()
         
         tryAgain = True
@@ -33,35 +129,22 @@ class Database():
                 c.execute(query, valList)
                 tryAgain = False
             except sqlite3.OperationalError as e:
-                pass
+                if allowFail:
+                    self.e = e
+                    c = None
+                    break
+                else:
+                    time.sleep(0.050)
             except Exception as e:
                 raise e
             
         return c
-        
-        
-    def GetFieldListFromSchema(self, schema):
-        return [x[0] for x in schema]
-
     
-    def TableExists(self, table):
-        retVal = False
+    
+    def GetLastError(self):
+        return self.e
         
-        valList = [(table)]
-        
-        query = """
-                SELECT  name
-                FROM    sqlite_master
-                WHERE   type='table' AND name=?
-                """
-        
-        c = self.Execute(query, valList)
-        
-        if c.fetchone() != None:
-            retVal = True
-        
-        return retVal
-        
+    
     def CreateTableIndex(self, tableName, keyFieldList, unique = False):
         if len(keyFieldList):
             keyFieldListStr = ", ".join(keyFieldList)
@@ -72,15 +155,20 @@ class Database():
                 uniqueStr = "UNIQUE"
             
             query = """
-                CREATE %s INDEX %s
+                CREATE %s INDEX IF NOT EXISTS %s
                 ON %s ( %s )
                 """ % (uniqueStr, indexName, tableName, keyFieldListStr)
-            
-            c = self.Execute(query)
+                
+            if not self.Execute(query, allowFail = True):
+                Log("Create index fail: %s" % self.GetLastError())
+                Log("Query: %s" % query)
+                Log("Quitting")
+                sys.exit(1)
+
     
     # http://www.sqlitetutorial.net/sqlite-autoincrement/
     # http://www.sqlitetutorial.net/sqlite-index/
-    def CreateTable(self, tableName, schema, keyFieldList = [], indexFieldListList = []):
+    def CreateTable(self, tableName, fieldList, uniqueKeyFieldList = [], indexList = []):
         # 2-part setup
         #
         # Establish the shape of the table:
@@ -95,10 +183,17 @@ class Database():
         #
         
         # Step 1, setup the shape of the table and create
-        schemaStr = ", ".join(" ".join(list(x)) for x in schema)
+        # Every field is a text field.
+        # Generate a string which is <FIELD> text, <FIELD> text, <FIELD> text...
+        
+        schemaStr = ""
+        sep = ""
+        for field in fieldList:
+            schemaStr += sep + "%s text" % field
+            sep = ", "
         
         query = """
-                CREATE TABLE %s
+                CREATE TABLE IF NOT EXISTS %s
                 (
                     rowid INTEGER PRIMARY KEY AUTOINCREMENT,
                     TIMESTAMP DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -106,16 +201,20 @@ class Database():
                 )
                 """ % (tableName, schemaStr)
         
-        c = self.Execute(query)
+        if not self.Execute(query, allowFail = True):
+            Log("Create table fail: %s" % self.GetLastError())
+            Log("Query: %s" % query)
+            Log("Quitting")
+            #sys.exit(1)
         
         # create timestamp index
         self.CreateTableIndex(tableName, ["TIMESTAMP"])
-
+        
         # Step 2, establish the unique index
-        self.CreateTableIndex(tableName, keyFieldList, unique = True)
-            
+        self.CreateTableIndex(tableName, uniqueKeyFieldList, unique = True)
+        
         # Step 3, create any table-specific indexes
-        for indexFieldList in indexFieldListList:
+        for indexFieldList in indexList:
             self.CreateTableIndex(tableName, indexFieldList)
     
 
@@ -162,22 +261,114 @@ class Database():
         
         return retVal
         
+
+        
+        
+        
+        
+        
+from libEvm import *
+        
+        
+#
+# Users should
+#
+# self.db = ManagedDatabase(self)
+# self.db.SetCbOnDatabaseStateChange(self.OnDatabaseStateChange)
+# 
+# def OnDatabaseStateChange(state)
+#   if state == "DATABASE_AVAILABLE":
+#       self.OnDoDatabaseStuff()
+#   if state == "DATABASE_CLOSING":
+#       self.OnDoFinalCleanup()
+#
+#
+class ManagedDatabase(Database, WSApp):
+    def __init__(self, wsApp):
+        Database.__init__(self)
+        WSApp.__init__(self)
+        
+        self.wsApp = wsApp
+        
+        self.cbFn  = None
+        self.dbSvc = SysDef.Get("CORE_DATABASE_MANAGER_SERVICE")
+        
+        self.dbState = None
+    
+    def SetCbOnDatabaseStateChange(self, cbFn):
+        self.cbFn = cbFn
+        
+        Log("Connecting to %s for database state" % self.dbSvc)
+        self.ConnectToDatabaseManagerService()
+
+    def OnDatabaseAvailable(self):
+        cfg = ConfigReader().ReadConfigOrAbort("Dct.master.json")
+        self.Connect()
+        self.Init(cfg)
+        
+        self.cbFn("DATABASE_AVAILABLE")
+        
+    def OnDatabaseClosing(self):
+        self.cbFn("DATABASE_CLOSING")
+        
+        evm_MainLoopFinish()
+        
+    def OnDatabaseAborted(self):
+        evm_MainLoopFinish()
+        
+    def ConnectToDatabaseManagerService(self):
+        self.wsApp.Connect(self.dbSvc, handler=self)
+        
+        
+    ######################################################################
+    #
+    # Implementing WSNodeMgr Events
+    #
+    ######################################################################
+
+    def OnWebSocketConnectedOutbound(self, ws):
+        Log("Connected to %s" % self.dbSvc)
+
+    def OnWebSocketReadable(self, ws):
+        msg = ws.Read()
+        
+        try:
+            if msg["MESSAGE_TYPE"] == "DATABASE_STATE":
+                state = msg["STATE"]
+                
+                if state == "DATABASE_AVAILABLE":
+                    self.OnDatabaseAvailable()
+                elif state == "DATABASE_CLOSING":
+                    self.OnDatabaseClosing()
+        except Exception as e:
+            Log("ERR: State connection message handler error: %s" % e)
+
+
+    def OnWebSocketClosed(self, ws):
+        Log("Connection lost to %s" % self.dbSvc)
+        self.OnDatabaseAborted()
+
+        
+    def OnWebSocketError(self, ws):
+        secsTryAgain = 5
+        Log("Couldn't connect to %s, trying again in %s" % (self.dbSvc, secsTryAgain))
+
+        evm_SetTimeout(self.ConnectToDatabaseManagerService, secsTryAgain * 1000)
+    
     
     
 
 class Table():
-    def __init__(self, db, tableName, schema, keyFieldList = [], indexFieldListList = []):
+    def __init__(self, db, tableName, fieldList, keyFieldList = [], indexFieldListList = []):
         self.db                 = db
         self.tableName          = tableName
-        self.schema             = schema
+        self.fieldList          = fieldList
         self.keyFieldList       = keyFieldList
         self.indexFieldListList = indexFieldListList
         
-        if self.db.TableExists(self.tableName) == False:
-            self.db.CreateTable(self.tableName, self.schema, self.keyFieldList, self.indexFieldListList)
         
     def GetFieldList(self):
-        return self.db.GetFieldListFromSchema(self.schema)
+        return self.fieldList
         
     def GetKeyFieldList(self):
         return self.keyFieldList

@@ -31,10 +31,10 @@ class App(WSApp):
             
     def OnKeyboardInput(self, line):
         if self.ws:
-            self.ws.Write(json.dumps({
+            self.ws.Write({
                 "MESSAGE_TYPE"       : "A_LINE",
                 "LINE"               : line,
-            }))
+            })
     
     ######################################################################
     #
@@ -47,14 +47,9 @@ class App(WSApp):
         Log("OnWebSocketConnectedOutbound")
 
     def OnWebSocketReadable(self, ws):
-        jsonObj = json.loads(ws.Read())
-        
+        msg = ws.Read()
         Log("Got data")
-        print(json.dumps(jsonObj,
-                         sort_keys=True,
-                         indent=4,
-                         separators=(',', ': ')))
-        
+        ws.DumpMsg(msg)
 
     def OnWebSocketClosed(self, ws):
         self.ws = None

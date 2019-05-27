@@ -74,6 +74,9 @@ class ConfigReader():
                         else:
                             Log("    Found")
 
+                    if i == len(self.cfgPathList):
+                        cont = False
+
         if cfgFile:
             if verbose:
                 Log("%s selected" % cfgFile)

@@ -1,0 +1,16 @@
+{
+    "tableList" : [
+        {
+            "name" : "NAME_VALUE",
+
+            "fieldList" : [
+                "NAME",
+                "VALUE"
+            ],
+
+            "uniqueKeyFieldList" : [
+                "NAME"
+            ]
+        }
+    ]
+}

@@ -54,17 +54,37 @@ class WSIface():
     def GetUserData(self):
         return self.userData
 
-    def Read(self):
+    def ReadRaw(self):
         msg = self.GetMessage()
         self.SetMessage("")
         return msg
 
-    def Write(self, msg):
+    def WriteRaw(self, msg):
         self.write_message(msg)
+
+    def Read(self):
+        buf = self.ReadRaw()
+        try:
+            jsonObj = json.loads(buf)
+        except:
+            jsonObj = json.loads("{}")
+
+        msg = jsonObj
+        return msg
+
+    def Write(self, msg):
+        self.WriteRaw(json.dumps(msg))
 
     def Close(self):
         self.SetSuppressEvents(True)
         self.close()
+
+    def DumpMsg(self, msg):
+        print(json.dumps(msg,
+                         sort_keys=True,
+                         indent=4,
+                         separators=(',', ': ')))
+ 
 
 
         
@@ -136,8 +156,12 @@ class WSNodeMgr():
         self.handler = handler
         self.webApp = None
 
-    def connect(self, url, userData=None):
-        mwso = ManagedWSOutbound(url, self.handler, userData)
+    def connect(self, url, userData=None, handler=None):
+        handlerToPass = self.handler
+        if handler:
+            handlerToPass = handler
+
+        mwso = ManagedWSOutbound(url, handlerToPass, userData)
         mwso.connect()
         return mwso
 
@@ -430,7 +454,7 @@ class WSApp(WSNodeMgrEventHandlerIface, WSNodeMgr):
             self.listen(self.serviceData["port"], self.serviceData["wsPath"])
 
     
-    def Connect(self, serviceOrAddrOrPort):
+    def Connect(self, serviceOrAddrOrPort, handler = None):
         handle = None
         addr   = None
         
@@ -464,7 +488,7 @@ class WSApp(WSNodeMgrEventHandlerIface, WSNodeMgr):
 
         # Try to connect to whatever we came up with
         if addr:
-            handle = self.connect(addr)
+            handle = self.connect(addr, handler = handler)
             
         return handle
     

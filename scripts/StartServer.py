@@ -8,6 +8,17 @@ import time
 from libCore import *
 
 
+def RunRemap():
+    retVal = True
+
+    try:
+        subprocess.check_call(("Remap.py").split())
+    except Exception as e:
+        retVal = False
+
+    return retVal
+
+
 def Main():
     retVal = False
 
@@ -26,22 +37,25 @@ def Main():
         state = ss.GetState()
 
         if state == "CLOSED":
-            ss.SetState("STARTING")
+            if RunRemap():
+                ss.SetState("STARTING")
 
-            print("Starting all services")
-            for service in serviceList:
-                if not RunInfo.ServiceIsRunning(service):
-                    try:
-                        cmd = "StartProcess.py " + service
-                        subprocess.check_call(cmd.split())
+                print("Starting all services")
+                for service in serviceList:
+                    if not RunInfo.ServiceIsRunning(service):
+                        try:
+                            cmd = "StartProcess.py " + service
+                            subprocess.check_call(cmd.split())
+                            retVal = True
+                        except Exception as e:
+                            retVal = False
+                    else:
+                        print("Service %s already running, no action taken" % service)
                         retVal = True
-                    except Exception as e:
-                        retVal = False
-                else:
-                    print("Service %s already running, no action taken" % service)
-                    retVal = True
 
-            ss.SetState("STARTED")
+                ss.SetState("STARTED")
+            else:
+                print("Remap failed, quitting")
         else:
             print("State %s, needs to be CLOSED, quitting" % state)
 

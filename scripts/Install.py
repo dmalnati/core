@@ -27,6 +27,7 @@ NON_PRODUCT_SUBDIR_LIST = [
     "/site-specific",
     "/site-specific/cfg",
     "/runtime",
+    "/runtime/db",
     "/runtime/logs",
     "/runtime/logs/currentRun",
     "/runtime/working",
@@ -259,6 +260,49 @@ def MergeProcessDetails(directory, fileSuffix, fileOut):
         with open(fFullPath, 'w') as file:
             file.write(dataOutFormated)
 
+def MergeDct(directory, fileSuffix, fileOut):
+    productList = GetProductList()
+    srcFileList = []
+
+    # find all product files which match the file suffix
+    for product in productList:
+        fFullPath = directory + "/" + product + "_" + fileSuffix
+
+        if os.path.isfile(fFullPath):
+            srcFileList.append(fFullPath)
+
+    cfgReader = ConfigReader()
+
+    dataOut  = ""
+    dataOut += "{ \"tableList\" : ["
+
+    # read in all the details and merge to one master
+    sep = ""
+    for srcFile in srcFileList:
+        cfg = cfgReader.ReadConfigOrAbort(srcFile)
+
+        entryList = cfg["tableList"]
+        for entry in entryList:
+            entryStr = json.dumps(entry)
+
+            dataOut += sep + entryStr
+
+            sep = ","
+
+    dataOut += "] }"
+
+    # prettify output
+    jsonObj = json.loads(dataOut)
+    dataOutFormated = (json.dumps(jsonObj,
+                                  sort_keys=True,
+                                  indent=4,
+                                  separators=(',', ': ')))
+
+    # write output file
+    fFullPath = directory + "/" + fileOut
+    with open(fFullPath, 'w') as file:
+        file.write(dataOutFormated)
+
 
 # expected output format:
 # <service> <host> <port> <wsPath>
@@ -384,6 +428,10 @@ def GenerateConfig():
     MergeProcessDetails(tmpDir,
                         "ProcessDetails.json",
                         "ProcessDetails.master.json")
+
+    Log("")
+    Log("Generating Dct.master.json")
+    MergeDct(tmpDir, "Dct.json", "Dct.master.json")
     Log("")
 
     Log("Generating WSServices.txt")

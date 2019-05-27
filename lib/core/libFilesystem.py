@@ -17,11 +17,13 @@ def Glob(pattern):
 def FileFullPath(file):
     return os.path.abspath(file)
 
+def FileExists(file):
+    return os.path.isfile(file)
 
 def SafeCopyFileIfExists(srcFile, dstFile):
     retVal = True
 
-    if os.path.isfile(srcFile):
+    if FileExists(srcFile):
         try:
             copyfile(srcFile, dstFile)
         except:
@@ -38,7 +40,7 @@ def FilePart(file):
 def SafeMoveFileIfExists(srcFile, dstFile):
     retVal = True
 
-    if os.path.isfile(srcFile):
+    if FileExists(srcFile):
         SafeMakeDir(DirectoryPart(dstFile))
 
         try:
@@ -57,6 +59,9 @@ def SafeMakeDir(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
+def SafeRemoveFileIfExists(file):
+    if FileExists(file):
+        os.unlink(file)
 
 def DeleteFilesInDir(directory):
     retVal = True
@@ -64,8 +69,7 @@ def DeleteFilesInDir(directory):
     for f in os.listdir(directory):
         try:
             fFullPath = directory + "/" + f
-            if os.path.isfile(fFullPath):
-                os.unlink(fFullPath)
+            SafeRemoveFileIfExists(fFullPath)
         except:
             retVal = False
 
@@ -84,7 +88,7 @@ def CopyFiles(srcDir, dstDir, verbose = False):
             if f[0] != '.':
                 fFullPath = srcDir + "/" + f
 
-                if os.path.isfile(fFullPath):
+                if FileExists(fFullPath):
                     srcFile = fFullPath
                     dstFile = dstDir + "/" + f
 
