@@ -13,7 +13,7 @@ class App(WSApp):
         self.dbState = "DATABASE_CLOSED"
         
     def Run(self):
-        ok = self.IsOk()
+        ok = True
 
         # check database config
         ConfigReader().ReadConfigOrAbort(CorePath("/runtime/db/Dct.master.json"))
@@ -72,15 +72,15 @@ class App(WSApp):
         })
 
     def AnnounceState(self, state):
-        numConnected = len(self.GetWebSocketInboundList())
+        numConnected = len(self.GetWSInboundList())
         Log("Announcing state %s to %s clients" % (state, numConnected))
-        for ws in self.GetWebSocketInboundList():
+        for ws in self.GetWSInboundList():
             self.SendState(ws, state)
 
     def OnCheckAllDisconnected(self):
         secCheckAgain = 1
 
-        numConnected = len(self.GetWebSocketInboundList())
+        numConnected = len(self.GetWSInboundList())
         if numConnected:
             Log("%s database state handlers still connected" % numConnected)
             Log("Checking again in %s" % secCheckAgain)
@@ -134,33 +134,19 @@ class App(WSApp):
         evm_SetTimeout(self.OnCheckAllDisconnected, 500)
 
         
-
     ######################################################################
     #
-    # Implementing WSNodeMgr Events
+    # Implementing WSApp Events
     #
     ######################################################################
-
-    def OnWebSocketConnectedInbound(self, ws):
-        numConnected = len(self.GetWebSocketInboundList())
+        
+    def OnWSConnectIn(self, ws):
+        numConnected = len(self.GetWSInboundList())
         Log("New inbound connection, total %s" % numConnected)
         Log("Sending state %s" % self.dbState)
         self.SendState(ws, self.dbState)
         Log("")
 
-    def OnWebSocketReadable(self, ws):
-        Log("Got data, ignoring")
-
-        msg = ws.Read()
-        ws.DumpMsg(msg)
-
-        Log("")
-        
-
-    def OnWebSocketClosed(self, ws):
-        numConnected = len(self.GetWebSocketInboundList())
-        Log("Inbound connection closed, %s remain" % numConnected)
-        Log("")
 
 
 def Main():

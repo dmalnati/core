@@ -7,4 +7,4 @@ from libRun import *
 from libServerState import *
 from libDb import *
 from libEvm import *
-from libWs import *
+from libWSApp import *
