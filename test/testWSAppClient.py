@@ -17,18 +17,14 @@ class App(WSApp):
         data = self.GetSelfServiceData()
         Log("%s : %s" % (data["service"], data["port"]))
 
-        if self.IsOk():
-            self.Connect(self.connectTo)
-            
-            WatchStdinLinesEndLoopOnEOF(self.OnKeyboardInput)
-            
-            Log("Running")
-            evm_MainLoop()
-            
-        else:
-            Log("Not OK, quitting")
-            
-            
+        self.Connect(self, self.connectTo)
+        
+        WatchStdinLinesEndLoopOnEOF(self.OnKeyboardInput)
+        
+        Log("Running")
+        evm_MainLoop()
+
+
     def OnKeyboardInput(self, line):
         if self.ws:
             self.ws.Write({
@@ -38,24 +34,23 @@ class App(WSApp):
     
     ######################################################################
     #
-    # Implementing WSNodeMgr Events
+    # Implementing WSApp Events
     #
     ######################################################################
 
-    def OnWebSocketConnectedOutbound(self, ws):
+    def OnConnect(self, ws):
         self.ws = ws
         Log("OnWebSocketConnectedOutbound")
 
-    def OnWebSocketReadable(self, ws):
-        msg = ws.Read()
-        Log("Got data")
+    def OnMessage(self, ws, msg):
+        Log("Got WS data")
         ws.DumpMsg(msg)
 
-    def OnWebSocketClosed(self, ws):
+    def OnClose(self, ws):
         self.ws = None
         Log("WS Closed")
 
-    def OnWebSocketError(self, ws):
+    def OnError(self, ws):
         Log("Couldn't connect")
 
 

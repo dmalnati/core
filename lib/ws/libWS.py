@@ -132,7 +132,13 @@ class WS(WebSocketEventHandler):
         if self.inOut == "OUT":
             self.wsManager.OnWSCloseOutbound(self)
         
-        
+    def DumpMsg(self, msg):
+        print(json.dumps(msg,
+                        sort_keys=True,
+                        indent=4,
+                        separators=(',', ': ')))
+    
+    
     def SendAbort(self, reason):
         try:
             self.Write({
@@ -197,8 +203,7 @@ class WS(WebSocketEventHandler):
     
 
 class WSManager(WebSocketManager,
-                WebSocketConnectionReceivedEventHandler,
-                WebSocketEventHandler):
+                WebSocketConnectionReceivedEventHandler):
     def __init__(self, id):
         WebSocketManager.__init__(self)
         
@@ -232,12 +237,92 @@ class WSManager(WebSocketManager,
     def ConnectCancel(self, handle):
         ws = handle
         ws.ConnectCancel()
+    
+    
+    #
+    # Really we want to absorb all the updates for the listen sockets into the
+    # main class, but we can't, because further-inherited children may want
+    # to do the same thing, and then they'd intercept these lower-level
+    # events.
+    #
+    # So we make a class to the side, have an instance, and let it twiddle the
+    # internals of this class.
+    #
+    class ListenSnooper(WebSocketEventHandler):
+        def __init__(self, wsManager):
+            self.wsManager = wsManager
+    
+        def OnConnect(self, webSocket):
+            
+            # here we intercept incoming connections so we can get a look at
+            # them beforehand.
+            
+            # tell this websocket to call us back until we choose to propigate to
+            # the upper layers
+            
+            # the methods below are how we keep track of these websockets
+            webSocket.SetHandler(self)
+        
+        def OnMessage(self, webSocket, buf):
+            ok = True
+            try:
+                msg = json.loads(buf)
+                err = False
+            except:
+                self.wsManager.SendAbortToWebSocket(webSocket, "MESSAGE NOT JSON")
+                ok = False
+            
+            if ok:
+                # validate all the right stuff
+                if "SESSION_ACTION" in msg and "ID" in msg:
+                    sessionAction = msg["SESSION_ACTION"]
+                    id            = msg["ID"]
+                    
+                    if sessionAction == "NEW" and id != "":
+                        # good to go, time to pass upward
+                        
+                        # intercept incoming connections so we can get a look at
+                        # them beforehand.
+                        # create our own ws object which notifies us
+                        ws = WS(self.wsManager, "IN")
+                        ws.SetWebSocket(webSocket)
+                        
+                        # propigate events from webSocket up to WS
+                        webSocket.SetHandler(ws)
+                        
+                        # keep track of this socket
+                        self.wsManager.OnWSConnectInbound(ws)
+                        
+                        # tell the upper layer
+                        self.wsManager.listenHandler.OnWSConnectIn(ws)
+                    else:
+                        err = True
+                else:
+                    err = True
+                    
+                if err:
+                    self.wsManager.SendAbortToWebSocket(webSocket, "MANDATORY PROTOCOL FIELDS MISSING OR INVALID")
+            else:
+                pass
+            
+        def OnClose(self, webSocket):
+            pass
+
+        def OnError(self, webSocket):
+            pass
         
         
     def Listen(self, handler, port, wsPath):
         self.listenHandler = handler
         
-        WebSocketManager.Listen(self, self, port, wsPath)
+        snooper = WSManager.ListenSnooper(self)
+        
+        WebSocketManager.Listen(self, snooper, port, wsPath)
+        
+        
+        
+        
+        
     
     #############################
     # Private
@@ -247,67 +332,6 @@ class WSManager(WebSocketManager,
     # WebSocketConnectionReceivedEventHandler
     #############################
 
-    def OnConnect(self, webSocket):
-        
-        # here we intercept incoming connections so we can get a look at
-        # them beforehand.
-        
-        # tell this websocket to call us back until we choose to propigate to
-        # the upper layers
-        
-        # the methods below are how we keep track of these websockets
-        webSocket.SetHandler(self)
-    
-    def OnMessage(self, webSocket, buf):
-        ok = True
-        try:
-            msg = json.loads(buf)
-            err = False
-        except:
-            self.SendAbortToWebSocket(webSocket, "MESSAGE NOT JSON")
-            ok = False
-        
-        if ok:
-            # validate all the right stuff
-            if "SESSION_ACTION" in msg and "ID" in msg:
-                sessionAction = msg["SESSION_ACTION"]
-                id            = msg["ID"]
-                
-                if sessionAction == "NEW" and id != "":
-                    # good to go, time to pass upward
-                    
-                    # intercept incoming connections so we can get a look at
-                    # them beforehand.
-                    # create our own ws object which notifies us
-                    ws = WS(self, "IN")
-                    ws.SetWebSocket(webSocket)
-                    
-                    # propigate events from webSocket up to WS
-                    webSocket.SetHandler(ws)
-                    
-                    # keep track of this socket
-                    self.OnWSConnectInbound(ws)
-                    
-                    # tell the upper layer
-                    self.listenHandler.OnWSConnectIn(ws)
-                else:
-                    err = True
-            else:
-                err = True
-                
-            if err:
-                self.SendAbortToWebSocket(webSocket, "MANDATORY PROTOCOL FIELDS MISSING OR INVALID")
-        else:
-            pass
-        
-        
-        
-        
-    def OnClose(self, webSocket):
-        pass
-
-    def OnError(self, webSocket):
-        pass
 
     def SendAbortToWebSocket(self, webSocket, msg):
         # WS objects can abort, but webSockets can't.
@@ -328,11 +352,9 @@ class WSManager(WebSocketManager,
     #############################
 
     def OnWSConnectOutbound(self, ws):
-        print("OnWSConnectOutbound")
         self.wsOutbound__data[ws] = True
     
     def OnWSCloseOutbound(self, ws):
-        print("OnWSCloseOutbound")
         self.wsOutbound__data.pop(ws)
     
     
@@ -342,11 +364,9 @@ class WSManager(WebSocketManager,
     #############################
     
     def OnWSConnectInbound(self, ws):
-        print("OnWSConnectInbound")
         self.wsInbound__data[ws] = True
     
     def OnWSCloseInbound(self, ws):
-        print("OnWSCloseInbound")
         self.wsInbound__data.pop(ws)
         
         

@@ -102,7 +102,7 @@ class WSApp(WSManager):
 
         # Try to connect to whatever we came up with
         if addr:
-            handle = self.Donnect(handler, addr)
+            handle = WSManager.Connect(self, handler, addr)
             
         return handle
     
