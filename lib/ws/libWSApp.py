@@ -11,7 +11,10 @@ from libWS import *
 #
 # WSApp
 # - Knows about services
-# - Expects you are a service
+# - Expects you are a service or a non-service client
+# - If you pass in a service name or service port, you become that
+# - If you pass in nothing, you are an anonymous service on a randomly
+#   assigned port
 # 
 #
 ###############################################################################
@@ -51,7 +54,18 @@ class WSApp(WSManager):
             
         # finally know enough to be able to init base class
         WSManager.__init__(self, self.serviceData["service"])
-        
+
+        port = self.Listen()
+
+        self.AffirmServiceDataWithPort(port)
+
+        Log("PID: %s" % os.getpid())
+
+        service = self.serviceData["service"]
+        addr    = self.serviceData["addr"]
+        Log("[%s :: %s]" % (service, addr))
+        Log("")
+
 
     def GetSelfServiceData(self):
         return self.serviceData
@@ -65,17 +79,22 @@ class WSApp(WSManager):
     
     
     def Listen(self):
-        WSManager.Listen(self, self, self.serviceData["port"], self.serviceData["wsPath"])
+        return WSManager.Listen(self,
+                                self,
+                                self.serviceData["port"], 
+                                self.serviceData["wsPath"])
     
     
     def Connect(self, handler, serviceOrAddrOrPort):
-        handle = None
-        addr   = None
+        handle  = None
+        addr    = None
+        service = None
         
         # Check first maybe it's an already-formed websocket address
         try:
             if serviceOrAddrOrPort.index("ws://") == 0:
-                addr = serviceOrAddrOrPort
+                addr    = serviceOrAddrOrPort
+                service = addr
         except:
             pass
 
@@ -84,24 +103,32 @@ class WSApp(WSManager):
             data = self.LookupServiceByName(serviceOrAddrOrPort)
             
             if data:
-                addr = data["addr"]
+                addr    = data["addr"]
+                service = data["service"]
 
         # Or maybe the port of a service
         if not addr:
             data = self.LookupServiceByPort(serviceOrAddrOrPort)
 
             if data:
-                addr = data["addr"]
+                addr    = data["addr"]
+                service = data["service"]
 
         # Or maybe just a port not defined, so we make up an address
         if not addr:
             if serviceOrAddrOrPort.isdigit():
-                addr = "ws://127.0.0.1:%s/ws" % serviceOrAddrOrPort
+                addr    = "ws://127.0.0.1:%s/ws" % serviceOrAddrOrPort
+                service = addr
             else:
                 pass
 
         # Try to connect to whatever we came up with
         if addr:
+            serviceStr = service
+            if service == addr:
+                serviceStr = "<?>"
+
+            Log("Connecting to [%s :: %s]" % (serviceStr, addr))
             handle = WSManager.Connect(self, handler, addr)
             
         return handle
@@ -136,7 +163,7 @@ class WSApp(WSManager):
                             data = {
                                 "service" : service,
                                 "host"    : host,
-                                "port"    : port,
+                                "port"    : str(port),
                                 "wsPath"  : wsPath,
                                 "addr"    : "ws://" + host + ":" + \
                                             port + wsPath,
@@ -161,7 +188,7 @@ class WSApp(WSManager):
 
         data["service"] = "SERVICE_%s:%s" % (str(os.getpid()), port)
         data["host"]    = "127.0.0.1"
-        data["port"]    = port
+        data["port"]    = str(port)
         data["wsPath"]  = "/ws"
         data["addr"]    = "ws://" + data["host"] + ":" + \
                           data["port"] + data["wsPath"]
@@ -173,12 +200,30 @@ class WSApp(WSManager):
 
         data["service"] = "SERVICE_%s" % (str(os.getpid()))
         data["host"]    = "127.0.0.1"
-        data["port"]    = "NA"
-        data["wsPath"]  = "NA"
+        data["port"]    = "0"
+        data["wsPath"]  = "/ws"
         data["addr"]    = "ws://" + data["host"] + ":" + \
                           data["port"] + data["wsPath"]
 
         return data
+
+    def AffirmServiceDataWithPort(self, port):
+        if self.serviceData["port"] == "0":
+            self.serviceData["port"] = str(port)
+
+            self.serviceData["service"]                   = \
+                self.serviceData["service"].split(":")[0] + \
+                ":"                                       + \
+                self.serviceData["port"]
+
+
+            self.serviceData["addr"]     = \
+                "ws://"                  + \
+                self.serviceData["host"] + \
+                ":"                      + \
+                self.serviceData["port"] + \
+                self.serviceData["wsPath"]
+            
 
 
     def LookupServiceByName(self, service):

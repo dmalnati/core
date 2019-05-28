@@ -103,7 +103,7 @@ def Run(service):
         if service == processDetail["name"]:
             cmd = processDetail["cmd"]
 
-            print("Running %s - %s" % (service, cmd))
+            Log("Running %s - %s" % (service, cmd))
 
             ForkDaemon(service, cmd)
 
@@ -111,7 +111,7 @@ def Run(service):
             break
 
     if not retVal:
-        print("Service %s not found" % service)
+        Log("Service %s not found" % service)
 
     return retVal
 

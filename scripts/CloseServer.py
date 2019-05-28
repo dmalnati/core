@@ -58,14 +58,14 @@ def Main():
 
         if not close and forceFlag:
             close = True
-            print("Force closing despite state %s not being STARTED" % state)
+            Log("Force closing despite state %s not being STARTED" % state)
 
         if close:
             timeOfCurrentState = ss.GetTimeOfLastChange()
 
             ss.SetState("CLOSING")
 
-            print("Closing all running services")
+            Log("Closing all running services")
             for service in serviceList:
                 if RunInfo.ServiceIsRunning(service):
                     try:
@@ -81,13 +81,13 @@ def Main():
 
             Archive(timeOfCurrentState)
         else:
-            print("State %s, needs to be STARTED, quitting" % state)
+            Log("State %s, needs to be STARTED, quitting" % state)
 
         ss.ReleaseStateLock()
     else:
-        print("State locked, operation in progress elsewhere, quitting")
+        Log("State locked, operation in progress elsewhere, quitting")
 
-    print("Done")
+    Log("Done")
 
     return retVal == False
 

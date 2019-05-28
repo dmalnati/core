@@ -12,11 +12,6 @@ class App(WSApp):
 
 
     def Run(self):
-        data = self.GetSelfServiceData()
-        Log("%s : %s" % (data["service"], data["port"]))
-
-        self.Listen()
-        
         WatchStdinLinesEndLoopOnEOF(self.OnKeyboardInput)
 
         Log("Running")

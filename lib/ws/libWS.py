@@ -335,7 +335,7 @@ class WSManager(WebSocketManager,
         
         snooper = WSManager.ListenSnooper(self)
         
-        WebSocketManager.Listen(self, snooper, port, wsPath)
+        return WebSocketManager.Listen(self, snooper, port, wsPath)
         
     
     

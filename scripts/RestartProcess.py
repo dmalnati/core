@@ -38,10 +38,10 @@ def Main():
                     retVal = False
                     pass
             else:
-                print("Service %s running when it shouldn't be, quitting" % service)
+                Log("Service %s running when it shouldn't be, quitting" % service)
                 retVal = False
     else:
-        print("Service %s does not exist" % service)
+        Log("Service %s does not exist" % service)
 
     return retVal == False
 

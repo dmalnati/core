@@ -32,15 +32,15 @@ def Main():
             try:
                 subprocess.check_call(("Run.py "+ service).split())
 
-                print("Service %s started" % service)
+                Log("Service %s started" % service)
 
                 retVal = True
             except:
-                print("Service %s could not be started" % service)
+                Log("Service %s could not be started" % service)
         else:
-            print("Service %s already running" % service)
+            Log("Service %s already running" % service)
     else:
-        print("Service %s does not exist" % service)
+        Log("Service %s does not exist" % service)
 
     return retVal == False
 

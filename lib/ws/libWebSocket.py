@@ -294,7 +294,7 @@ class WebSocketManager():
 
     # can only do this once
     def Listen(self, handler, port, wsPath, localDirAsWebRoot=None, sslOptions=None):
-        retVal = True
+        retVal = 0
 
         #
         # Receiving WebSockets requires a tornado web Application.
@@ -333,8 +333,12 @@ class WebSocketManager():
             self.webApp = tornado.web.Application(handlerList)
 
             # Continue with init
+            socketList = tornado.netutil.bind_sockets(port)
             httpServer = tornado.httpserver.HTTPServer(self.webApp)
-            httpServer.listen(port)
+            httpServer.add_sockets(socketList)
+
+            listeningPort = socketList[0].getsockname()[1]
+            retVal = listeningPort
 
             if sslOptions:
                 sslPort     = sslOptions["sslPort"]
@@ -350,7 +354,7 @@ class WebSocketManager():
                 sslHttpServer.listen(sslPort)
 
         else:
-            retVal = False
+            retVal = 0
 
         return retVal
 

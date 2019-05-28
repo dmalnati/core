@@ -49,9 +49,6 @@ class App(WSApp):
         if ok:
             self.dbState = "DATABASE_AVAILABLE"
 
-            # Accept connections
-            self.Listen()
-
             # Handle events
             Log("Running")
             Log("")
