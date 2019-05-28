@@ -7,17 +7,19 @@ from libCore import *
 
 
 class App(WSApp):
-    def __init__(self, serviceOrAddrOrPort):
+    def __init__(self, serviceOrAddrOrPort, special):
         WSApp.__init__(self)
 
         self.connectTo = serviceOrAddrOrPort
+        self.special   = special
         self.ws        = None
         
     def Run(self):
         data = self.GetSelfServiceData()
         Log("%s : %s" % (data["service"], data["port"]))
 
-        self.Connect(self, self.connectTo)
+        self.ws = self.Connect(self, self.connectTo)
+        self.ws.SetSpecial(self.special)
         
         WatchStdinLinesEndLoopOnEOF(self.OnKeyboardInput)
         
@@ -57,12 +59,16 @@ class App(WSApp):
 
 def Main():
     if len(sys.argv) < 2 or (len(sys.argv) >= 2 and sys.argv[1] == "--help"):
-        print("Usage: %s <serviceOrAddrOrPort>" % (os.path.basename(sys.argv[0])))
+        print("Usage: %s <serviceOrAddrOrPort> [<special>]" % (os.path.basename(sys.argv[0])))
         sys.exit(-1)
 
     serviceOrAddrOrPort = sys.argv[1]
+    special = False
+    if len(sys.argv) >= 3:
+        if sys.argv[2] == "special":
+            special = True
 
-    app = App(serviceOrAddrOrPort)
+    app = App(serviceOrAddrOrPort, special)
     app.Run()
 
 

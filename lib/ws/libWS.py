@@ -104,10 +104,14 @@ class WS(WebSocketEventHandler):
         self.inOut     = inOut
         self.handler   = handler
         self.webSocket = None
+        self.special   = False
     
     #############################
     # Public
     #############################
+    
+    def SetSpecial(self, special):
+        self.special = special
     
     def SetHandler(self, handler):
         self.handler = handler
@@ -157,10 +161,18 @@ class WS(WebSocketEventHandler):
     #############################
 
     def OnConnect(self, webSocket):
-        self.Write({
-            "SESSION_ACTION" : "NEW",
-            "ID"             : str(self.wsManager.id),
-        })
+        if self.special:
+            self.Write({
+                "SESSION_TYPE"   : "SPECIAL",
+                "SESSION_ACTION" : "NEW",
+                "ID"             : str(self.wsManager.id),
+            })
+        else:
+            self.Write({
+                "SESSION_TYPE"   : "NORMAL",
+                "SESSION_ACTION" : "NEW",
+                "ID"             : str(self.wsManager.id),
+            })
         
         # this event can only happen to outbound
         self.wsManager.OnWSConnectOutbound(self)
@@ -211,6 +223,9 @@ class WSManager(WebSocketManager,
         
         self.wsOutbound__data = dict()
         self.wsInbound__data  = dict()
+        
+        self.specialSessionHandler = WSManager.SpecialSessionHandler(self)
+        self.shutdownHandler       = self
         
         self.listenHandler = None
         
@@ -274,11 +289,14 @@ class WSManager(WebSocketManager,
             
             if ok:
                 # validate all the right stuff
-                if "SESSION_ACTION" in msg and "ID" in msg:
+                if "SESSION_TYPE" in msg and "SESSION_ACTION" in msg and "ID" in msg:
+                    sessionType   = msg["SESSION_TYPE"]
                     sessionAction = msg["SESSION_ACTION"]
                     id            = msg["ID"]
                     
-                    if sessionAction == "NEW" and id != "":
+                    if sessionType == "SPECIAL":
+                        self.wsManager.OnSpecialSession(webSocket, msg)
+                    elif sessionAction == "NEW" and id != "":
                         # good to go, time to pass upward
                         
                         # intercept incoming connections so we can get a look at
@@ -319,10 +337,58 @@ class WSManager(WebSocketManager,
         
         WebSocketManager.Listen(self, snooper, port, wsPath)
         
+    
+    
+    class SpecialSessionHandler():
+        def __init__(self, wsManager):
+            self.wsManager = wsManager
+            
+            self.ws__data = dict()
+    
+        def AddSpecialSession(self, webSocket, msg):
+            # create our own ws object which notifies us
+            ws = WS(self, "-")
+            ws.SetWebSocket(webSocket)
+            
+            # propigate events from webSocket up to WS
+            webSocket.SetHandler(ws)
+            
+            # have the WS conact me for messaging
+            ws.SetHandler(self)
+            
+            # keep track of special sessions
+            self.ws__data[ws] = msg
+            
+            
+        def OnMessage(self, ws, msg):
+            if "COMMAND" in msg:
+                command = msg["COMMAND"]
+                
+                if command == "KILL":
+                    ws.Write({
+                        "REPLY" : "ACK",
+                    })
+                    evm_MainLoopFinish()
+                elif command == "SHUTDOWN":
+                    ws.Write({
+                        "REPLY" : "ACK",
+                    })
+                    self.wsManager.shutdownHandler.OnShutdown()
+                else:
+                    ws.Write({
+                        "REPLY" : "NACK",
+                    })
+
+        def OnClose(self, ws):
+            self.ws__data.pop(ws)
+
+    
+    
+    def OnSpecialSession(self, webSocket, msg):
+        self.specialSessionHandler.AddSpecialSession(webSocket, msg)
         
-        
-        
-        
+    def OnShutdown(self):
+        Log("SHUTDOWN received, doing nothing")
     
     #############################
     # Private

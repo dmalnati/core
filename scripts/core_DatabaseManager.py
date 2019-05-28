@@ -49,9 +49,6 @@ class App(WSApp):
         if ok:
             self.dbState = "DATABASE_AVAILABLE"
 
-            # Close the database in a bit, not sure how this works yet
-            evm_SetTimeout(self.OnDoDatabaseClose, 10000)
-
             # Accept connections
             self.Listen()
 
@@ -64,6 +61,9 @@ class App(WSApp):
 
         return ok
 
+    def OnShutdown(self):
+        Log("SHUTDOWN received, closing database")
+        self.OnDoDatabaseClose()
 
     def SendState(self, ws, state):
         ws.Write({

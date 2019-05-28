@@ -30,6 +30,38 @@ def ActuallyKilled(service):
     return retVal
 
 
+def GetWSKillType(service):
+    proc = ProcessDetails().Get(service)
+
+    killCmd = "KILL"
+    if "kill" in proc:
+        killCmd = proc["kill"]
+
+    return killCmd
+
+def OkToKill(service):
+    retVal = True
+
+    killCmd = GetWSKillType(service)
+
+    # handle special "SHUTDOWN" command, means don't kill ever
+    if killCmd == "SHUTDOWN":
+        retVal = False
+
+    return retVal
+
+def WSKill(service):
+    killCmd = GetWSKillType(service)
+
+    try:
+        subprocess.check_output(("WSReq.py %s %s " % (service, killCmd)).split())
+    except:
+        pass
+
+def Kill(pid):
+    subprocess.check_call(("kill " + str(pid)).split())
+
+
 def Main():
     retVal = False
 
@@ -41,24 +73,37 @@ def Main():
 
     if RunInfo.ServiceExists(service):
         if RunInfo.ServiceIsRunning(service):
-            print("Killing %s" % service)
+            Log("Killing %s" % service)
             try:
                 pid = RunInfo.GetServicePid(service)
 
-                subprocess.check_call(("kill " + str(pid)).split())
+                WSKill(service)
 
                 if ActuallyKilled(service):
-                    print("Service %s killed" % service)
+                    Log("Service %s killed" % service)
                     retVal = True
                 else:
-                    print("Service %s was not killed after term" % service)
+                    Log("Service %s was not killed via WS" % service)
+                    if OkToKill(service):
+                        Log("Resorting to actual kill command")
 
+                        Kill(pid)
+
+                        if ActuallyKilled(service):
+                            Log("Service %s killed" % service)
+                            retVal = True
+                        else:
+                            Log("Service %s was not killed after term" %
+                                  service)
+                    else:
+                        Log("Service %s ineligible for kill command, quitting" %
+                            service)
             except Exception as e:
-                print("Service %s could not be killed: %s" % (service, e))
+                Log("Service %s could not be killed: %s" % (service, e))
         else:
-            print("Service %s not running" % service)
+            Log("Service %s not running" % service)
     else:
-        print("Service %s does not exist" % service)
+        Log("Service %s does not exist" % service)
 
     return retVal == False
 
