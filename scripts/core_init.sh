@@ -79,6 +79,8 @@ then
     rt(){ RestartProcess.py $1 ; tail -f $L/$1.* ; }
     kp(){ KillProcess.py $1 ; }
     t(){ tail -f $L/$1.* ; }
+    serv(){ testWSAppServer.py $1 ; }
+    cli(){ testWSAppClient.py $1 ; }
     
     # set up other environment variables which get used
     export CORE_SERVICE_NAME=""
@@ -106,8 +108,10 @@ then
     complete -F GetProductListAsTabCompletion  kp
     complete -F GetProductListAsTabCompletion  t
     complete -F GetProductListAsTabCompletion  WSReq.py
-    complete -F GetProductListAsTabCompletion  testWSClient.py
     complete -F GetProductListAsTabCompletion  testWSAppClient.py
+    complete -F GetProductListAsTabCompletion  cli
+    complete -F GetProductListAsTabCompletion  testWSAppServer.py
+    complete -F GetProductListAsTabCompletion  serv
 
     # make hitting tab expand variables on command line
     shopt -s direxpand

@@ -284,10 +284,9 @@ from libEvm import *
 #       self.OnDoFinalCleanup()
 #
 #
-class ManagedDatabase(Database, WSApp):
+class ManagedDatabase(Database, WSEventHandler):
     def __init__(self, wsApp):
         Database.__init__(self)
-        WSApp.__init__(self)
         
         self.wsApp = wsApp
         
@@ -300,7 +299,7 @@ class ManagedDatabase(Database, WSApp):
         self.cbFn = cbFn
         
         Log("Connecting to %s for database state" % self.dbSvc)
-        self.ConnectToDatabaseManagerService()
+        self.wsApp.Connect(self, self.dbSvc)
 
     def OnDatabaseAvailable(self):
         cfg = ConfigReader().ReadConfigOrAbort(CorePath("/runtime/db/Dct.master.json"))
@@ -314,25 +313,17 @@ class ManagedDatabase(Database, WSApp):
         
         evm_MainLoopFinish()
         
-    def OnDatabaseAborted(self):
-        evm_MainLoopFinish()
-        
-    def ConnectToDatabaseManagerService(self):
-        self.wsApp.Connect(self.dbSvc, handler=self)
-        
-        
+
     ######################################################################
     #
     # Implementing WSNodeMgr Events
     #
     ######################################################################
 
-    def OnWebSocketConnectedOutbound(self, ws):
+    def OnConnect(self, ws):
         Log("Connected to %s" % self.dbSvc)
 
-    def OnWebSocketReadable(self, ws):
-        msg = ws.Read()
-        
+    def OnMessage(self, ws, msg):
         try:
             if msg["MESSAGE_TYPE"] == "DATABASE_STATE":
                 state = msg["STATE"]
@@ -345,16 +336,13 @@ class ManagedDatabase(Database, WSApp):
             Log("ERR: State connection message handler error: %s" % e)
 
 
-    def OnWebSocketClosed(self, ws):
-        Log("Connection lost to %s" % self.dbSvc)
-        self.OnDatabaseAborted()
+    def OnClose(self, ws):
+        Log("Connection lost to %s, exiting" % self.dbSvc)
+        evm_MainLoopFinish()
 
         
-    def OnWebSocketError(self, ws):
-        secsTryAgain = 5
-        Log("Couldn't connect to %s, trying again in %s" % (self.dbSvc, secsTryAgain))
-
-        evm_SetTimeout(self.ConnectToDatabaseManagerService, secsTryAgain * 1000)
+    def OnError(self, ws):
+        Log("Couldn't connect to %s, trying again" % (self.dbSvc))
     
     
     
