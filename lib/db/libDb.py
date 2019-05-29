@@ -4,14 +4,19 @@ import sys
 from libUtl import *
 from libRun import *
 from libSysDef import *
+from libServerState import *
 from libWSApp import *
 
 import sqlite3
-
-
-
-
     
+
+###############################################################################    
+#
+# db = Database()
+# if db.Connect():
+#     do stuff
+#
+###############################################################################
 
 class Database():
     def __init__(self):
@@ -61,17 +66,44 @@ class Database():
         
         return dbFullPath
         
+    @staticmethod
+    def GetDctConfigPath():
+        return DirectoryPart(Database.GetDatabaseClosedFullPath()) + "/Dct.master.json"
+    
+    @staticmethod
+    def GetDctCfg():
+        return ConfigReader().ReadConfigOrAbort(Database.GetDctConfigPath())
+
         
-    def Connect(self, dbPath = None):
+    def Connect(self, createOnInit = False, verbose = False, forcedDbFullPath = None):
         retVal = True
         
-        dbFullPath = Database.GetDatabaseRunningFullPath()
-        if dbPath:
-            dbFullPath = dbPath
+        state = ServerState().GetState()
         
-        Log("Connecting to database %s" % dbFullPath)
-        self.conn             = sqlite3.connect(dbFullPath)
-        self.conn.row_factory = sqlite3.Row
+        dbFullPath = None
+        if forcedDbFullPath:
+            dbFullPath = forcedDbFullPath
+        else:
+            if state == "CLOSED":
+                if FileExists(Database.GetDatabaseRunningFullPath()):
+                    Log("Server CLOSED, but online database exists, selecting online database")
+                    dbFullPath = Database.GetDatabaseRunningFullPath()
+                else:
+                    Log("Server CLOSED, selecting offline database")
+                    dbFullPath = Database.GetDatabaseClosedFullPath()
+            elif state == "STARTED":
+                Log("Server STARTED, selecting online database")
+                dbFullPath = Database.GetDatabaseRunningFullPath()
+            else:
+                Log("Server not CLOSED or STARTED, connection failed")
+                retVal = False
+
+        if retVal:
+            Log("Connecting to database %s" % dbFullPath)
+            self.conn             = sqlite3.connect(dbFullPath)
+            self.conn.row_factory = sqlite3.Row
+            
+            retVal = self.Init(createOnInit, verbose)
         
         return retVal
     
@@ -81,10 +113,12 @@ class Database():
             self.conn.close()
     
     
-    # Should only be called by ManagedDatabase or by
-    # apps not using ManagedDatabase but who want to use the library
-    def Init(self, cfg, verbose = False):
+    
+    # private
+    def Init(self, createOnInit = True, verbose = False):
         retVal = True
+        
+        cfg = Database.GetDctCfg()
         
         dctTableList = cfg["tableList"]
         
@@ -103,11 +137,13 @@ class Database():
                 break
 
             else:
-                if verbose:
-                    Log("Table %s" % tableName)
-                
-                self.CreateTable(tableName, fieldList, uniqueKeyFieldList, indexList)
+                if createOnInit:
+                    Log("%s - Ensuring structure" % tableName)
+                    self.CreateTable(tableName, fieldList, uniqueKeyFieldList, indexList)
 
+                if verbose:
+                    Log("%s - Internalizing structure" % tableName)
+                    
                 table = Table(self, tableName, fieldList, uniqueKeyFieldList, indexList)
                 self.tableName__table[tableName] = table
                 
@@ -121,25 +157,29 @@ class Database():
     # I am not interested in this, so simply re-try until something other than
     # a timeout exception occurs.
     def Execute(self, query, valList = [], allowFail = False):
-        c = self.conn.cursor()
+        retVal = None
         
-        tryAgain = True
-        
-        while tryAgain:
-            try:
-                c.execute(query, valList)
-                tryAgain = False
-            except sqlite3.OperationalError as e:
-                if allowFail:
-                    self.e = e
-                    c = None
-                    break
-                else:
-                    time.sleep(0.050)
-            except Exception as e:
-                raise e
+        if self.conn:
+            c = self.conn.cursor()
             
-        return c
+            tryAgain = True
+            
+            while tryAgain:
+                try:
+                    c.execute(query, valList)
+                    tryAgain = False
+                except sqlite3.OperationalError as e:
+                    if allowFail:
+                        self.e = e
+                        c = None
+                        break
+                    else:
+                        time.sleep(0.050)
+                except Exception as e:
+                    raise e
+            retVal = c
+            
+        return retVal
     
     
     def GetLastError(self):
@@ -223,11 +263,12 @@ class Database():
         retVal  = False
         rowList = []
         
-        c = self.Execute(query, valList)
-        rowList = c.fetchall()
-        
-        if len(rowList) != 0:
-            retVal = True
+        if self.conn:
+            c = self.Execute(query, valList)
+            rowList = c.fetchall()
+            
+            if len(rowList) != 0:
+                retVal = True
         
         return retVal, rowList
 
@@ -301,12 +342,9 @@ class ManagedDatabase(Database, WSEventHandler):
         Log("Connecting to %s for database state" % self.dbSvc)
         self.wsApp.Connect(self, self.dbSvc)
 
-    def OnDatabaseAvailable(self):
-        cfg = ConfigReader().ReadConfigOrAbort(CorePath("/runtime/db/Dct.master.json"))
-        self.Connect()
-        self.Init(cfg)
-        
-        self.cbFn("DATABASE_AVAILABLE")
+    def OnDatabaseAvailable(self, dbFullPath):
+        if self.Connect(forcedDbFullPath = dbFullPath):
+            self.cbFn("DATABASE_AVAILABLE")
         
     def OnDatabaseClosing(self):
         self.cbFn("DATABASE_CLOSING")
@@ -326,10 +364,11 @@ class ManagedDatabase(Database, WSEventHandler):
     def OnMessage(self, ws, msg):
         try:
             if msg["MESSAGE_TYPE"] == "DATABASE_STATE":
-                state = msg["STATE"]
+                state      = msg["STATE"]
+                dbFullPath = msg["DATABASE_PATH"]
                 
                 if state == "DATABASE_AVAILABLE":
-                    self.OnDatabaseAvailable()
+                    self.OnDatabaseAvailable(dbFullPath)
                 elif state == "DATABASE_CLOSING":
                     self.OnDatabaseClosing()
         except Exception as e:

@@ -11,7 +11,12 @@ class App:
         self.db = Database()
         
     def OnTimeout(self):
-        pass
+        Log("App Connecting to database: %s")
+
+        if self.db.Connect():
+            Log("App Connected to database")
+        else:
+            Log("App Could not connect to database")
         
     def OnStdIn(self, line):
         linePartList = line.split()

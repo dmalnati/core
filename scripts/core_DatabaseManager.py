@@ -15,9 +15,6 @@ class App(WSApp):
     def Run(self):
         ok = True
 
-        # check database config
-        ConfigReader().ReadConfigOrAbort(CorePath("/runtime/db/Dct.master.json"))
-
         if ok:
             # check if offline database exists, should thanks to Remap, or abort
             dbOffline = Database.GetDatabaseClosedFullPath()
@@ -66,6 +63,7 @@ class App(WSApp):
         ws.Write({
             "MESSAGE_TYPE" : "DATABASE_STATE",
             "STATE"        : state,
+            "DATABASE_PATH": Database.GetDatabaseRunningFullPath()
         })
 
     def AnnounceState(self, state):

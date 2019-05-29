@@ -75,6 +75,7 @@ then
     alias ct="cd $CORE/core/test"
     alias cl="cd $CORE/core/lib"
     
+    sp(){ StartProcess.py $1 ; }
     st(){ StartProcess.py $1 ; tail -f $L/$1.* ; }
     rt(){ RestartProcess.py $1 ; tail -f $L/$1.* ; }
     kp(){ KillProcess.py $1 ; }
@@ -101,6 +102,7 @@ then
         COMPREPLY=( $(compgen -W '$processList' -- $curr_arg ) );
     }
     complete -F GetProductListAsTabCompletion  StartProcess.py
+    complete -F GetProductListAsTabCompletion  sp
     complete -F GetProductListAsTabCompletion  st
     complete -F GetProductListAsTabCompletion  RestartProcess.py
     complete -F GetProductListAsTabCompletion  rt

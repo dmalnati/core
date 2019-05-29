@@ -12,7 +12,7 @@ class App():
         dbOfflineDir   = DirectoryPart(self.dbOffline)
 
         self.cfgName          = "Dct.master.json"
-        self.cfgNameCached    = dbOfflineDir + "/" + self.cfgName
+        self.cfgNameCached    = Database.GetDctConfigPath()
         self.cfgNameGenerated = CorePath("/generated-cfg/" + self.cfgName)
 
     # Cached Dct should exist if this function is being called
@@ -80,7 +80,7 @@ class App():
                 Log("Cached Dct not valid")
                 retVal = False
             else:
-                Log("Offline db exists, managing")
+                pass
 
         return retVal
 
@@ -96,16 +96,15 @@ class App():
                 Log("Offline database consistent")
 
                 # Read cached database configuration
-                cfg = ConfigReader().ReadConfigOrAbort(self.cfgNameCached)
+                cfg = Database.GetDctCfg()
 
-                Log("Managing offline db: %s" % self.dbOffline)
+                Log("Managing offline db")
 
                 # configure internal libraries
                 Log("Opening database")
                 self.db = Database()
-                self.db.Connect(self.dbOffline)
 
-                if self.db.Init(cfg, verbose=True):
+                if self.db.Connect(createOnInit = True, verbose = True):
                     Log("Database ok")
                 else:
                     Log("Database NOT ok")
