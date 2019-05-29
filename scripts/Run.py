@@ -31,9 +31,6 @@ def ActuallyRun(service, cmd):
             return libc.prctl(1, sig)
         return callable
 
-    # Change to standard directory
-    #os.chdir(core + "/runtime/logs")
-
     # Give process an input file descriptor which will never read active
     fdRead, fdWrite = os.pipe()
 
@@ -50,16 +47,12 @@ def ActuallyRun(service, cmd):
 
 def ForkDaemon(service, cmd):
     try:
-        #print("pre-fork")
         pid = os.fork()
 
         # get rid of the parent
         if pid > 0:
-            #print("parent-fork")
             sys.exit(0)
 
-        # child continues
-        #print("child-fork")
         os.chdir("/")
         os.setsid()
         os.umask(0)
@@ -67,27 +60,7 @@ def ForkDaemon(service, cmd):
         # actually run it now that forking over
         ActuallyRun(service, cmd)
 
-        # try:
-        #     print("pre-2nd-fork")
-        #     pid = os.fork()
-
-        #     if pid > 0:
-        #         print("child-as-parent-fork")
-        #         while True:
-        #             sys.exit(0)
-
-        #     print("child-of-child-fork")
-        #     os.chdir("/")
-        #     os.setsid()
-        #     os.umask(0)
-
-
-        # except Exception as e:
-        #     #print("exceptInner: %s" % e)
-        #     pass
-
     except Exception as e:
-        #print("exceptOuter: %s" % e)
         pass
 
     return True
@@ -102,6 +75,9 @@ def Run(service):
     for processDetail in cfg["processDetailsList"]:
         if service == processDetail["name"]:
             cmd = processDetail["cmd"]
+            
+            # Set up run environment for this service
+            os.environ["CORE_SERVICE_NAME"] = service
 
             Log("Running %s - %s" % (service, cmd))
 

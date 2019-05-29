@@ -260,6 +260,21 @@ def MergeProcessDetails(directory, fileSuffix, fileOut):
         with open(fFullPath, 'w') as file:
             file.write(dataOutFormated)
 
+    # read in this file and create simple text file of all
+    # known services for tab completion (or other) purposes
+    cfg = ConfigReader().ReadConfigOrAbort(directory + "/" + "ProcessDetails.master.json")
+
+    nameList = []
+    for processDetail in cfg["processDetailsList"]:
+        nameList.append(processDetail["name"])
+    nameList.sort()
+
+    Log("Creating ProcessList.txt")
+    fd = open(directory + "/" + "ProcessList.txt", "w")
+    fd.write(" ".join(nameList) + "\n")
+    fd.close()
+
+
 def MergeDct(directory, fileSuffix, fileOut):
     productList = GetProductList()
     srcFileList = []
@@ -385,6 +400,7 @@ def GenerateWSServices(directory):
 
     except Exception as e:
         Log("Couldn't generate WSServices: %s" % e)
+
 
 
 def GenerateConfig():

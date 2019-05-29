@@ -4,7 +4,7 @@ import sys
 from libUtl import *
 from libRun import *
 from libSysDef import *
-from libWs import *
+from libWSApp import *
 
 import sqlite3
 

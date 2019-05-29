@@ -7,8 +7,8 @@ from libCore import *
 
 
 class App(WSApp):
-    def __init__(self, myServiceOrAddrOrPort, serviceOrAddrOrPort, special):
-        WSApp.__init__(self, myServiceOrAddrOrPort)
+    def __init__(self, serviceOrAddrOrPort, special):
+        WSApp.__init__(self)
 
         self.connectTo = serviceOrAddrOrPort
         self.special   = special
@@ -55,18 +55,17 @@ class App(WSApp):
 
 
 def Main():
-    if len(sys.argv) < 3 or (len(sys.argv) >= 2 and sys.argv[1] == "--help"):
-        print("Usage: %s <myServiceOrAddrOrPort> <serviceOrAddrOrPort> [<special>]" % (os.path.basename(sys.argv[0])))
+    if len(sys.argv) < 2 or (len(sys.argv) >= 2 and sys.argv[1] == "--help"):
+        print("Usage: %s <serviceOrAddrOrPort> [<special>]" % (os.path.basename(sys.argv[0])))
         sys.exit(-1)
 
-    myServiceOrAddrOrPort = sys.argv[1]
-    serviceOrAddrOrPort   = sys.argv[2]
+    serviceOrAddrOrPort = sys.argv[1]
     special = False
-    if len(sys.argv) >= 4:
-        if sys.argv[3] == "special":
+    if len(sys.argv) >= 3:
+        if sys.argv[2] == "special":
             special = True
 
-    app = App(myServiceOrAddrOrPort, serviceOrAddrOrPort, special)
+    app = App(serviceOrAddrOrPort, special)
     app.Run()
 
 

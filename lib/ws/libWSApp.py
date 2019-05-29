@@ -26,15 +26,24 @@ class WSApp(WSManager):
         self.service__data = dict()
         self.serviceData = None
 
+        # read in list of services
         self.ReadServiceDirectory()
         
-        # On startup, a WSApp will init.
-        # Servers will identify their service name or port.
-        # Clients won't.
+        # If a proper service, the service name will be set in the env
+        svcName = os.environ["CORE_SERVICE_NAME"]
+        
+        # If the app wants to override its nature, or it's not a proper service,
+        # it can pass in details and they will take precidence.
         #
-        # If we're a server, we want to identify our own service details so
-        # when the server tries to Listen later, it has its details sorted
-
+        # However, in the (default) state where services don't try to give
+        # their own details, take the environment variable.
+        #
+        # In the event that no details are passed in, and not a proper service,
+        # it still works, as we generate details.
+        if not serviceOrPort:
+            if svcName != "":
+                serviceOrPort = svcName
+        
         if serviceOrPort:
             # Maybe the name of a service
             if not self.serviceData:
@@ -52,13 +61,20 @@ class WSApp(WSManager):
         else:
             self.serviceData = self.MakeServiceDataClient()
             
-        # finally know enough to be able to init base class
+        # finally know enough to be able to init base class with an ID
         WSManager.__init__(self, self.serviceData["service"])
+        
+        # Call WSManager Listen directly
+        portActual = WSManager.Listen(self,
+                                      self,
+                                      self.serviceData["port"], 
+                                      self.serviceData["wsPath"])
+    
+        # update our state if we assumed or set a port different than
+        # the one actually allocated
+        self.AffirmServiceDataWithPort(portActual)
 
-        port = self.Listen()
-
-        self.AffirmServiceDataWithPort(port)
-
+        # Useful stamp at start of applications
         Log("PID: %s" % os.getpid())
 
         service = self.serviceData["service"]
@@ -72,19 +88,13 @@ class WSApp(WSManager):
         
 
     #############################
-    # virtual -- implement if you're going to call Listen
+    # virtual -- implement if you're going to listen for inbound connections
     #############################
     def OnWSConnectIn(self, ws):
         ws.SendAbort("NOT ACCEPTING CONNECTIONS")
-    
-    
-    def Listen(self):
-        return WSManager.Listen(self,
-                                self,
-                                self.serviceData["port"], 
-                                self.serviceData["wsPath"])
-    
-    
+
+
+        
     def Connect(self, handler, serviceOrAddrOrPort):
         handle  = None
         addr    = None

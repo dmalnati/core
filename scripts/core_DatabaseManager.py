@@ -7,8 +7,8 @@ from libCore import *
 
 
 class App(WSApp):
-    def __init__(self, svcName):
-        WSApp.__init__(self, svcName)
+    def __init__(self):
+        WSApp.__init__(self)
 
         self.dbState = "DATABASE_CLOSED"
         
@@ -147,12 +147,11 @@ class App(WSApp):
 
 
 def Main():
-    if len(sys.argv) < 2 or (len(sys.argv) >= 2 and sys.argv[1] == "--help"):
-        print("Usage: %s <svcName>" % os.path.basename(sys.argv[0]))
+    if len(sys.argv) < 1 or (len(sys.argv) >= 2 and sys.argv[1] == "--help"):
+        print("Usage: %s" % os.path.basename(sys.argv[0]))
         sys.exit(-1)
 
-    svcName = sys.argv[1]
-    retVal  = App(svcName).Run()
+    retVal = App().Run()
 
     return retVal == False
 
