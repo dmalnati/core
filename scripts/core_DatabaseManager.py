@@ -6,7 +6,7 @@ import os
 from libCore import *
 
 
-class App(WSApp):
+class App(WSApp, WSEventHandler):
     def __init__(self):
         WSApp.__init__(self)
 
@@ -136,13 +136,28 @@ class App(WSApp):
     ######################################################################
         
     def OnWSConnectIn(self, ws):
+        ws.SetHandler(self)
+    
         numConnected = len(self.GetWSInboundList())
         Log("New inbound connection, total %s" % numConnected)
         Log("Sending state %s" % self.dbState)
         self.SendState(ws, self.dbState)
         Log("")
 
+    def OnMessage(self, ws, msg):
+        Log("Ignoring message received:")
+        ws.DumpMsg(msg)
 
+    def OnClose(self, ws):
+        numConnected = len(self.GetWSInboundList())
+        Log("Prior connection closed, total %s" % numConnected)
+        Log("")
+        
+    def OnError(self, ws):
+        pass
+        
+        
+        
 
 def Main():
     if len(sys.argv) < 1 or (len(sys.argv) >= 2 and sys.argv[1] == "--help"):

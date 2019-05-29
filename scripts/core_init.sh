@@ -67,7 +67,7 @@ then
     alias ss="cd $CC"
     alias l="cd $L"
     alias gc="cd $GC"
-    alias arclog="cd $CORE/archive/`ls $CORE/archive/ | tail -n 1`/logs"
+    arclog(){ cd "$CORE/archive/`ls $CORE/archive/ | tail -n 1`/logs" ; }
     
     alias c="cd $CORE"
     alias ccf="cd $CORE/core/cfg"
