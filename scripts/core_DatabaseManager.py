@@ -10,7 +10,17 @@ class App(WSApp, WSEventHandler):
     def __init__(self):
         WSApp.__init__(self)
 
+        self.db = None
         self.dbState = "DATABASE_CLOSED"
+        self.backupIntervalMin         = float(SysDef().Get("CORE_DATABASE_BACKUP_INTERVAL_MIN"))
+        self.capacityCheckIntervalMin  = float(SysDef().Get("CORE_DATABASE_CAPACITY_CHECK_INTERVAL_MIN"))
+        self.capacityCheckThresholdPct = int(SysDef().Get("CORE_DATABASE_CAPACITY_CHECK_THRESHOLD_PCT"))
+        
+        Log("Configured for:")
+        Log("Backup interval min              : %s" % int(self.backupIntervalMin))
+        Log("Disk capacity check interval min : %s" % int(self.capacityCheckIntervalMin))
+        Log("Disk capacity check threshold pct: %s%%" % self.capacityCheckThresholdPct)
+        Log("")
         
     def Run(self):
         ok = True
@@ -44,11 +54,20 @@ class App(WSApp, WSEventHandler):
                 ok = False
 
         if ok:
-            self.dbState = "DATABASE_AVAILABLE"
-
-            # Handle events
-            Log("Running")
-            Log("")
+            self.db = Database()
+            if self.db.Connect(forcedDbFullPath=Database.GetDatabaseRunningFullPath()):
+                self.dbState = "DATABASE_AVAILABLE"
+                
+                self.ScheduleNextBackup()
+                self.ScheduleNextDatabaseCapacityCheck()
+                
+                # Handle events
+                Log("Running")
+                Log("")
+            else:
+                Log("Could not open database, shutting down")
+                self.OnDoDatabaseClose()
+            
             evm_MainLoop()
 
         Log("Done")
@@ -88,6 +107,47 @@ class App(WSApp, WSEventHandler):
 
         Log("")
         
+        
+    def OnDoBackup(self):
+        Log("Vacuuming database")
+        Database.DoVacuum(Database.GetDatabaseRunningFullPath())
+        
+        Log("Backing up database")
+        Database.DoRunningBackup()
+        
+    def ScheduleNextBackup(self):
+        def OnTimeout():
+            self.OnDoBackup()
+            self.ScheduleNextBackup()
+        
+        if self.dbState == "DATABASE_AVAILABLE":
+            Log("Scheduling next database backup for %s minutes" % int(self.backupIntervalMin))
+            evm_SetTimeout(OnTimeout, int(self.backupIntervalMin * 60 * 1000))
+        
+    def OnDoDatabaseCapacityCheck(self):
+        pct = GetDiskUsagePct(Database.GetDatabaseRunningFullPath())
+        
+        if pct:
+            if pct >= self.capacityCheckThresholdPct:
+                Log("Disk capacity at %s%%, exceeds threshold of %s%%, taking database offline" %
+                    (pct, self.capacityCheckThresholdPct))
+                self.OnDoDatabaseClose()
+            else:
+                pass
+        else:
+            Log("Unable to get disk capacity for database, taking database offline")
+            self.OnDoDatabaseClose()
+        
+        
+    def ScheduleNextDatabaseCapacityCheck(self):
+        def OnTimeout():
+            self.OnDoDatabaseCapacityCheck()
+            self.ScheduleNextDatabaseCapacityCheck()
+        
+        if self.dbState == "DATABASE_AVAILABLE":
+            evm_SetTimeout(OnTimeout, int(self.capacityCheckIntervalMin * 60 * 1000))
+        
+        
     def OnAllDiconnectedSoCloseDatabase(self):
         ok = True
 
@@ -126,7 +186,7 @@ class App(WSApp, WSEventHandler):
         self.AnnounceState(self.dbState)
 
         # set timer to check that everyone has disconnected
-        evm_SetTimeout(self.OnCheckAllDisconnected, 500)
+        evm_SetTimeout(self.OnCheckAllDisconnected, 1000)
 
         
     ######################################################################

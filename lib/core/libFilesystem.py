@@ -3,6 +3,8 @@ import sys
 import shutil
 import glob
 
+import subprocess
+
 from distutils import dir_util
 from shutil import copyfile, move
 
@@ -123,4 +125,39 @@ def CopyFiles(srcDir, dstDir, verbose = False):
                         retVal = False
 
     return retVal
+
+
+#
+# df
+
+# Filesystem     1K-blocks    Used Available Use% Mounted on
+# /dev/root       30551492 5428844  23831792  19% /
+# devtmpfs          476224       0    476224   0% /dev
+# tmpfs              96168    4652     91516   5% /run
+# tmpfs               5120       0      5120   0% /run/lock
+# tmpfs             769332      12    769320   1% /run/shm
+# /dev/mmcblk0p1     57288   23272     34016  41% /boot
+#
+# df  /run/shm/pi/database.db
+# Filesystem     1K-blocks  Used Available Use% Mounted on
+# tmpfs             769332    12    769320   1% /run/shm
+#
+def GetDiskUsagePct(dirOrFile):
+    retVal = None
+
+    output = None
+    try:
+        # get second line, 4th index (Use%), chars up to but not including % sign
+        retVal = int(subprocess.check_output(("df %s" % dirOrFile).split()).split("\n")[1].split()[4][:-1])
+    except Exception as e:
+        print("E: %s" % e)
+        pass
+        
+    return retVal
+
+
+
+
+
+
 

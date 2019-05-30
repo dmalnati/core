@@ -53,18 +53,22 @@ class ManagedDatabase(Database, WSEventHandler):
         Log("Connected to %s" % self.dbSvc)
 
     def OnMessage(self, ws, msg):
+        state      = None
+        dbFullPath = None
+        
         try:
             if msg["MESSAGE_TYPE"] == "DATABASE_STATE":
                 state      = msg["STATE"]
                 dbFullPath = msg["DATABASE_PATH"]
-                
-                if state == "DATABASE_AVAILABLE":
-                    self.OnDatabaseAvailable(dbFullPath)
-                elif state == "DATABASE_CLOSING":
-                    self.OnDatabaseClosing()
         except Exception as e:
             Log("ERR: State connection message handler error: %s" % e)
+            ws.DumpMsg(msg)
 
+        if state and dbFullPath:
+            if state == "DATABASE_AVAILABLE":
+                self.OnDatabaseAvailable(dbFullPath)
+            elif state == "DATABASE_CLOSING":
+                self.OnDatabaseClosing()
 
     def OnClose(self, ws):
         Log("Connection lost to %s, exiting" % self.dbSvc)

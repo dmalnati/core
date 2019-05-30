@@ -181,12 +181,14 @@ class WS(WebSocketEventHandler):
             self.handler.OnConnect(self)
 
     def OnMessage(self, webSocket, buf):
+        msg = None
         try:
             msg = json.loads(buf)
-            if self.handler:
-                self.handler.OnMessage(self, msg)
         except:
             pass
+        
+        if msg and self.handler:
+            self.handler.OnMessage(self, msg)
 
     def OnClose(self, webSocket):
         if self.inOut == "IN":

@@ -66,8 +66,80 @@ class Database():
         return dbFullPath
         
     @staticmethod
+    def GetDatabaseBackupFullPath():
+        dbFullPath = CorePath("/runtime/db/database.db.bak")
+        
+        return dbFullPath
+        
+    @staticmethod
     def GetDctConfigPath():
         return DirectoryPart(Database.GetDatabaseClosedFullPath()) + "/Dct.master.json"
+    
+    
+    @staticmethod
+    def DoVacuum(dbFile):
+        retVal = True
+        
+        Log("Vacuuming %s" % (dbFile))
+        
+        try:
+            con = sqlite3.connect(dbFile)
+        
+            timeStart = DateTimeNow()
+            
+            con.execute("pragma temp_store_directory=\"%s\"" % CorePath("/runtime/db"))
+            con.execute("vacuum")
+            
+            timeEnd = DateTimeNow()
+            secDiff = DateTimeStrDiffSec(timeEnd, timeStart)
+            
+            con.close()
+            
+            Log("Vacuum complete, took %s sec" % secDiff)
+        except Exception as e:
+            Log("Vacuum failed: %s" % e)
+            retVal = False
+            
+        return retVal
+            
+    
+    @staticmethod
+    def DoRunningBackup():
+        backupWorked = Database.DoBackup(Database.GetDatabaseRunningFullPath(),
+                                         Database.GetDatabaseBackupFullPath())
+        
+        if backupWorked:
+            Log("Overwriting offline database with backup")
+            copyWorked = SafeCopyFileIfExists(Database.GetDatabaseBackupFullPath(),
+                                              Database.GetDatabaseClosedFullPath())
+            if copyWorked:
+                Log("  Success")
+            else:
+                Log("  Fail")
+        else:
+            pass
+            
+        SafeRemoveFileIfExists(Database.GetDatabaseBackupFullPath())
+        
+    
+    @staticmethod
+    def DoBackup(dbFrom, dbTo):
+        retVal = True
+        
+        Log("Backing up from %s to %s" % (dbFrom, dbTo))
+        
+        try:
+            timeStart = DateTimeNow()
+            subprocess.check_output(["sqlite3", dbFrom, ".backup %s" % dbTo])
+            timeEnd = DateTimeNow()
+            secDiff = DateTimeStrDiffSec(timeEnd, timeStart)
+            
+            Log("Backup complete, took %s sec" % secDiff)
+        except Exception as e:
+            Log("Backup failed: %s" % e)
+            retVal = False
+        
+        return retVal
     
     @staticmethod
     def GetDctCfg():
@@ -168,6 +240,10 @@ class Database():
                     c.execute(query, valList)
                     tryAgain = False
                 except sqlite3.OperationalError as e:
+                    if str(e) == "disk I/O error":
+                        Log("Database gone, aborting")
+                        sys.exit(1)
+                    
                     if allowFail:
                         self.e = e
                         c = None
@@ -235,7 +311,7 @@ class Database():
         query = """
                 CREATE TABLE IF NOT EXISTS %s
                 (
-                    rowid INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ID INTEGER PRIMARY KEY AUTOINCREMENT,
                     TIMESTAMP DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
                     %s
                 )
@@ -292,7 +368,7 @@ class Database():
         
         try:
             self.Execute(query, valList)
-        except:
+        except sqlite3.IntegrityError:
             retVal = False
         
         if self.batchOn == False:
@@ -344,12 +420,12 @@ class Table():
         retVal = -1
         
         query = """
-                SELECT    rowid
+                SELECT    ID as rowid
                 FROM      %s
                 ORDER BY  rowid DESC
                 LIMIT     1
                 """ % (self.tableName)
-    
+
         retVal, rowList = self.db.Query(query)
         
         if retVal:
@@ -501,12 +577,11 @@ class Record():
             sep = " AND "
     
         query = """
-                SELECT  rowid, datetime(TIMESTAMP, 'localtime') AS TIMESTAMP, *
+                SELECT  ID as rowid, datetime(TIMESTAMP, 'localtime') AS TIMESTAMP, *
                 FROM    %s
                 WHERE   %s
                 """ % (self.table.tableName, whereStr)
     
-        
         retVal, rowList = self.table.db.Query(query)
         
         if retVal:
@@ -532,7 +607,7 @@ class Record():
                 %s
                 VALUES ( %s )
                 """ % (self.table.tableName, colNameListStr, valListStr)
-    
+        
         retVal = self.table.db.QueryCommit(query)
         
         return retVal
@@ -540,7 +615,7 @@ class Record():
         
     def ReadNextInLinearScan(self):
         query = """
-                SELECT    rowid, datetime(TIMESTAMP, 'localtime') AS TIMESTAMP, *
+                SELECT    ID as rowid, datetime(TIMESTAMP, 'localtime') AS TIMESTAMP, *
                 FROM      %s
                 WHERE     rowid > %s
                 ORDER BY  rowid ASC
@@ -559,9 +634,9 @@ class Record():
         query = """
                 DELETE
                 FROM    %s
-                WHERE   rowid = %s
+                WHERE   ID = %s
                 """ % (self.table.tableName, self.GetRowId())
-    
+
         retVal = self.table.db.QueryCommit(query)
         
         return retVal
@@ -576,7 +651,7 @@ class Record():
         query = """
                 UPDATE  %s
                 SET     %s
-                WHERE   rowid = %s
+                WHERE   ID = %s
                 """ % (self.table.tableName, updateStr, self.GetRowId())
     
         retVal = self.table.db.QueryCommit(query)

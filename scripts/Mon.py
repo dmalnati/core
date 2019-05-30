@@ -18,10 +18,19 @@ def Mon():
     state         = ServerState().GetState()
     stateDuration = ServerState().GetDurationOfCurrentStateFormatted()
 
+
+    capacityCheckThresholdPct = int(SysDef().Get("CORE_DATABASE_CAPACITY_CHECK_THRESHOLD_PCT"))
+    pct = GetDiskUsagePct(Database.GetDatabaseRunningFullPath())
+    pctStr = "-"
+    if pct:
+        pctStr = "%s%%" % pct
+
+
     subprocess.call("tput clear".split())
 
     
     print("State: %s (for %s)" % (state, stateDuration))
+    print("DB: %s / %s%%" %(pctStr, capacityCheckThresholdPct))
     print("")
 
     print("%6s %6s %6s    %-25s %-s" % ("pid", "cpu", "mem", "service", "desc"))
