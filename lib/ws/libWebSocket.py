@@ -179,8 +179,6 @@ class WebSocketInbound():
     def __init__(self, wsInboundRecieverInstance):
         self.wsInboundRecieverInstance = wsInboundRecieverInstance
         
-        self.wsInboundRecieverInstance.SetWebSocketEventHandler(self)
-        
         self.handler = None
 
     #############################
@@ -223,27 +221,9 @@ class WebSocketInbound():
 # the individual instances will come alive to handle each new 
 # inbound WebSocket
 class WebSocketInboundReceiver(tornado.websocket.WebSocketHandler):
-    HANDLER = None
-
-    def __init__(self, webApp, request, **kwargs):
-        tornado.web.RequestHandler.__init__(self,
-                                            webApp,
-                                            request,
-                                            **kwargs)
-                                            
+    def initialize(self, **key__value):
+        self.handlerOnOpen = key__value["handlerOnOpen"]
         self.handlerWebSocketEvent = None
-        
-        # seems to break on ubuntu without this, despite running 4.1 ...
-        if hasattr(self, "_on_close_called") == False:
-            self._on_close_called = False
-
-        # and one spotted on raspberry pi ...
-        if hasattr(self, "close_code") == False:
-            self.close_code = False
-            
-    def SetWebSocketEventHandler(self, handlerWebSocketEvent):
-        self.handlerWebSocketEvent = handlerWebSocketEvent
-
     
     #############################
     # Private
@@ -254,7 +234,12 @@ class WebSocketInboundReceiver(tornado.websocket.WebSocketHandler):
 
     def open(self):
         self.set_nodelay(True)
-        WebSocketInboundReceiver.HANDLER(self)
+        
+        ws = WebSocketInbound(self)
+        
+        self.handlerWebSocketEvent = ws;
+        
+        self.handlerOnOpen.OnConnect(ws)
 
     def on_message(self, msg):
         self.handlerWebSocketEvent.OnMessage(msg)
@@ -262,9 +247,6 @@ class WebSocketInboundReceiver(tornado.websocket.WebSocketHandler):
     def on_close(self):
         self.handlerWebSocketEvent.OnClose()
 
-    @classmethod
-    def SetHandler(cls, handler):
-        cls.HANDLER = handler
         
         
         
@@ -293,41 +275,13 @@ class WebSocketManager():
         wso.ConnectCancel()
 
     # can only do this once
-    def Listen(self, handler, port, wsPath, localDirAsWebRoot=None, sslOptions=None):
+    def Listen(self, handler, port, wsPath):
         retVal = 0
 
-        #
-        # Receiving WebSockets requires a tornado web Application.
-        #
-        # That isn't supported here, so we'll just instantiate a privte one
-        # for the sake of getting WebSockets working.
-        #
         if not self.webApp:
-            # Retain handler for inbound websockets
-            WebSocketManager.SetHandlerInboundWebSocket(handler)
-        
-            # Handler class will hold the single callback to distribute events,
-            # the individual instances will come alive to handle each new 
-            # inbound WebSocket
-            WebSocketInboundReceiver.SetHandler(WebSocketManager.OnNewInboundWebSocket)
-            
-            # Set up the handlers for the web application.
-            #
-            # Unconditionally support websocket handler
             handlerList = [
-                (wsPath, WebSocketInboundReceiver)
+                (wsPath, WebSocketInboundReceiver, dict(handlerOnOpen=handler))
             ]
-
-            # Conditionally support http
-            if localDirAsWebRoot:
-                handlerList.append(
-                    (r"/(.*)",
-                     tornado.web.StaticFileHandler,
-                     {
-                        "path" : localDirAsWebRoot
-                     }
-                    )
-                )
 
             # Create the web App
             self.webApp = tornado.web.Application(handlerList)
@@ -340,33 +294,12 @@ class WebSocketManager():
             listeningPort = socketList[0].getsockname()[1]
             retVal = listeningPort
 
-            if sslOptions:
-                sslPort     = sslOptions["sslPort"]
-                sslCertFile = sslOptions["sslCertFile"]
-                sslKeyFile  = sslOptions["sslKeyFile"]
-
-                sslHttpServer = tornado.httpserver.HTTPServer(self.webApp,
-                                                              ssl_options={
-                    "certfile" : sslCertFile,
-                    "keyfile"  : sslKeyFile
-                })
-
-                sslHttpServer.listen(sslPort)
 
         else:
             retVal = 0
 
         return retVal
 
-    HANDLER = None
-    @classmethod
-    def SetHandlerInboundWebSocket(cls, handler):
-        cls.HANDLER = handler
-
-    @classmethod
-    def OnNewInboundWebSocket(cls, wsInboundRecieverInstance):
-        ws = WebSocketInbound(wsInboundRecieverInstance)
-        cls.HANDLER.OnConnect(ws)
 
 
 
