@@ -43,6 +43,16 @@ def GetFileModificationTimeFormatted(file):
         pass
 
     return retVal
+    
+def GetFileSize(file):
+    size = 0
+    
+    try:
+        size = os.path.getsize(file)
+    except:
+        pass
+    
+    return size
 
 def SafeCopyFileIfExists(srcFile, dstFile):
     retVal = True
@@ -148,7 +158,7 @@ def GetDiskUsagePct(dirOrFile):
     output = None
     try:
         # get second line, 4th index (Use%), chars up to but not including % sign
-        retVal = int(subprocess.check_output(("df %s" % dirOrFile).split()).split("\n")[1].split()[4][:-1])
+        retVal = int(subprocess.check_output(("df %s" % DirectoryPart(dirOrFile)).split()).split("\n")[1].split()[4][:-1])
     except Exception as e:
         print("E: %s" % e)
         pass

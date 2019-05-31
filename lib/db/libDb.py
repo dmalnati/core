@@ -87,8 +87,10 @@ class Database():
         
             timeStart = DateTimeNow()
             
+            fileSizeBefore = GetFileSize(dbFile)
             con.execute("pragma temp_store_directory=\"%s\"" % CorePath("/runtime/db"))
             con.execute("vacuum")
+            fileSizeAfter = GetFileSize(dbFile)
             
             timeEnd = DateTimeNow()
             secDiff = DateTimeStrDiffSec(timeEnd, timeStart)
@@ -96,6 +98,10 @@ class Database():
             con.close()
             
             Log("Vacuum complete, took %s sec" % secDiff)
+            Log("Size before : %11s" % Commas(fileSizeBefore))
+            Log("Size after  : %11s" % Commas(fileSizeAfter))
+            Log("Size reduced: %11s" % Commas(fileSizeBefore - fileSizeAfter))
+            Log("")
         except Exception as e:
             Log("Vacuum failed: %s" % e)
             retVal = False
