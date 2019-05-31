@@ -45,6 +45,23 @@ class Handler(WebSocketEventHandler):
             }))
 
 
+class HandlerNonPrimary(WSEventHandler):
+    def OnWSConnectIn(self, ws):
+        Log("NP OnConnect")
+        
+    def OnMessage(self, ws, msg):
+        Log("NP OnMessage: %s" % msg)
+
+    def OnClose(self, ws):
+        Log("NP OnClose")
+
+    def OnError(self, ws):
+        Log("NP OnError")
+
+
+
+
+
 
 class App():
     def __init__(self, port, wsPath):
@@ -58,6 +75,7 @@ class App():
         Log("%s : %s" % (self.port, self.wsPath))
 
         self.wsMgr.Listen(self.handlerOnNew, self.port, self.wsPath)
+        self.wsMgr.AddWSListener(HandlerNonPrimary(), self.wsPath + "/np")
         
         WatchStdinLinesEndLoopOnEOF(self.OnKeyboardInput)
 

@@ -3,7 +3,7 @@ import time
 
 import json
 
-from libWebSocket import *
+from libWebService import *
 from libEvm import *
 
 
@@ -11,7 +11,7 @@ from libEvm import *
 #
 # This is the WS interface.
 #
-# Enhances and simplifies basic WebSocket interface.
+# Enhances and simplifies basic WebService/WebSocket interface.
 #
 # Supports
 # - JSON message passing, only.
@@ -53,16 +53,24 @@ from libEvm import *
 # - OnWSConnectIn(ws)
 #     hand off to something, do whatever actions a server does now
 #     ws.SetHandler(WSEventHandler)
+#     or deal with the events itself
 #
 #
 #
 ###############################################################################
 
 
-class WSEventHandler():
-    def __init__(self):
+class WSConnectionReceivedEventHandler():
+    def OnWSConnectIn(self, ws):
+        # ws.SetHandler(...)
+        # followed by getting the relevant WebSocketEventHandler events
+        # or deal with the events itself
         pass
         
+
+
+class WSEventHandler(WSConnectionReceivedEventHandler):
+    # for outbound only
     def OnConnect(self, ws):
         pass
 
@@ -72,17 +80,11 @@ class WSEventHandler():
     def OnClose(self, ws):
         pass
 
-    # auto re-connects
+    # auto re-connects outbound only
     def OnError(self, ws):
         pass
 
         
-        
-class WSConnectionReceivedEventHandler():
-    def OnWSConnectIn(self, ws):
-        # ws.SetHandler(...)
-        # followed by getting the relevant WebSocketEventHandler events
-        pass
         
         
         
@@ -135,6 +137,8 @@ class WS(WebSocketEventHandler):
             self.wsManager.OnWSCloseInbound(self)
         if self.inOut == "OUT":
             self.wsManager.OnWSCloseOutbound(self)
+        if self.inOut == "IN_NON_PRIMARY":
+            self.wsManager.OnWSNonPrimaryCloseInbound(self)
         
     def DumpMsg(self, msg):
         print(json.dumps(msg,
@@ -185,7 +189,7 @@ class WS(WebSocketEventHandler):
         try:
             msg = json.loads(buf)
         except:
-            pass
+            self.SendAbort("MESSAGE NOT JSON")
         
         if msg and self.handler:
             self.handler.OnMessage(self, msg)
@@ -195,6 +199,8 @@ class WS(WebSocketEventHandler):
             self.wsManager.OnWSCloseInbound(self)
         if self.inOut == "OUT":
             self.wsManager.OnWSCloseOutbound(self)
+        if self.inOut == "IN_NON_PRIMARY":
+            self.wsManager.OnWSNonPrimaryCloseInbound(self)
         
         if self.handler:
             self.handler.OnClose(self)
@@ -216,15 +222,16 @@ class WS(WebSocketEventHandler):
     
     
 
-class WSManager(WebSocketManager,
+class WSManager(WebServiceManager,
                 WebSocketConnectionReceivedEventHandler):
     def __init__(self, id):
-        WebSocketManager.__init__(self)
+        WebServiceManager.__init__(self)
         
         self.id = id
         
         self.wsOutbound__data = dict()
         self.wsInbound__data  = dict()
+        self.wsInboundNonPrimary__data = dict()
         
         self.specialSessionHandler = WSManager.SpecialSessionHandler(self)
         self.shutdownHandler       = self
@@ -314,6 +321,7 @@ class WSManager(WebSocketManager,
                         self.wsManager.OnWSConnectInbound(ws)
                         
                         # tell the upper layer
+                        ws.SetHandler(self.wsManager)
                         self.wsManager.listenHandler.OnWSConnectIn(ws)
                     else:
                         err = True
@@ -331,13 +339,50 @@ class WSManager(WebSocketManager,
         def OnError(self, webSocket):
             pass
         
-        
+    
+    # this is for primary service communication purposes.
+    # any supplemental websocket or web service handlers will not be
+    # managed specifically by this library
     def Listen(self, handler, port, wsPath):
         self.listenHandler = handler
         
         snooper = WSManager.ListenSnooper(self)
         
-        return WebSocketManager.Listen(self, snooper, port, wsPath)
+        portListening = WebServiceManager.Listen(self, port)
+        
+        WebServiceManager.AddWebSocketListener(self, snooper, wsPath)
+        
+        return portListening
+    
+    
+    
+    # this is for arbitrary additional ws listeners
+    def AddWSListener(self, handler, wsPath):
+        # keep track of them, separate from normal service
+        # enforce json
+        # don't require initial message passing, message structure, etc
+        
+        class NonPrimaryWSListener():
+            def __init__(self, wsManager, listenHandler):
+                self.wsManager     = wsManager
+                self.listenHandler = listenHandler
+                
+            def OnConnect(self, webSocket):
+                ws = WS(self.wsManager, "IN_NON_PRIMARY")
+                ws.SetWebSocket(webSocket)
+                webSocket.SetHandler(ws)
+                
+                # keep track of this socket
+                self.wsManager.OnWSNonPrimaryConnectInbound(ws)
+                
+                # tell the upper layer
+                ws.SetHandler(self.listenHandler)
+                self.listenHandler.OnWSConnectIn(ws)
+        
+        handlerNonPrimary = NonPrimaryWSListener(self, handler)
+        
+        return WebServiceManager.AddWebSocketListener(self, handlerNonPrimary, wsPath)
+        
         
     
     
@@ -436,6 +481,18 @@ class WSManager(WebSocketManager,
     
     def OnWSCloseInbound(self, ws):
         self.wsInbound__data.pop(ws)
+        
+        
+        
+    #############################
+    # Noticing non-primary inbound events
+    #############################
+    
+    def OnWSNonPrimaryConnectInbound(self, ws):
+        self.wsInboundNonPrimary__data[ws] = True
+    
+    def OnWSNonPrimaryCloseInbound(self, ws):
+        self.wsInboundNonPrimary__data.pop(ws)
         
         
         

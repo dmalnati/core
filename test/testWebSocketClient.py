@@ -6,13 +6,13 @@ import os
 import json
 
 from libCore import *
-from libWebSocket import *
 
 
 
 class Handler(WebSocketEventHandler):
-    def __init__(self):
-        self.ws = None
+    def __init__(self, raw):
+        self.raw = raw
+        self.ws  = None
 
     def OnConnect(self, ws):
         Log("OnConnect")
@@ -31,18 +31,21 @@ class Handler(WebSocketEventHandler):
     def GotData(self, line):
         Log("Handler data: %s" % line)
         if self.ws:
-            self.ws.Write(json.dumps({
-                "MESSAGE_TYPE" : "A_LINE",
-                "LINE"         : line,
-            }))
+            if self.raw:
+                self.ws.Write(line)
+            else:
+                self.ws.Write(json.dumps({
+                    "MESSAGE_TYPE" : "A_LINE",
+                    "LINE"         : line,
+                }))
         
 
 
 class App():
-    def __init__(self, addr):
+    def __init__(self, addr, raw):
         self.connectTo = addr
         self.webSocket = None
-        self.handler   = Handler()
+        self.handler   = Handler(raw)
 
     def Run(self):
         Log("Starting")
@@ -63,12 +66,15 @@ class App():
 
 def Main():
     if len(sys.argv) < 2 or (len(sys.argv) >= 2 and sys.argv[1] == "--help"):
-        print("Usage: %s <addr>" % (os.path.basename(sys.argv[0])))
+        print("Usage: %s <addr> [-raw]" % (os.path.basename(sys.argv[0])))
         sys.exit(-1)
 
     addr = sys.argv[1]
-
-    app = App(addr)
+    raw = False
+    if len(sys.argv) >= 3:
+        raw = sys.argv[2] == "-raw"
+    
+    app = App(addr, raw)
     app.Run()
 
 

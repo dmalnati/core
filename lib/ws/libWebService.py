@@ -1,6 +1,4 @@
 import os
-import time
-
 import tornado.httpserver
 import tornado.websocket
 import tornado.ioloop
@@ -38,9 +36,9 @@ from libUtl import *
 # - an instance of an inbound websocket
 #
 #
-# WebSocketManager
-# - Gets you access to a central place to acquire outbound and inbound
-#   WebSockets
+# WebServiceManager
+# - Gets you access to a central place to manage web services, such as
+#   listening for websockets inbound.
 # - Must be only be one of these
 # - Not required if only using outbound WebSockets
 #
@@ -52,11 +50,15 @@ from libUtl import *
 # - deal with OnX events
 #
 # A server will:
-# - WebSocketManager.Listen(WebSocketConnectionReceivedEventHandler, ...)
+# - wsm = WebServiceManager()
+# - wsm.Listen(port)
+# - wsm.AddWebSocketListener(WebSocketConnectionReceivedEventHandler, wsPath)
+# WebSocketConnectionReceivedEventHandler
 # - OnConnect(ws)
 #     hand off to something, do whatever actions a server does now
 #     ws.SetHandler(WebSocketEventHandler)
-#
+#     - deal with OnX events
+#     or the handler can deal with the events itself
 #
 #
 ###############################################################################
@@ -68,7 +70,16 @@ from libUtl import *
 #
 ###############################################################################
 
-class WebSocketEventHandler():
+
+class WebSocketConnectionReceivedEventHandler():
+    def OnConnect(self, ws):
+        # ws.SetHandler(...)
+        # followed by getting the relevant WebSocketEventHandler events
+        pass
+
+        
+class WebSocketEventHandler(WebSocketConnectionReceivedEventHandler):
+    # for outbound only
     def OnConnect(self, ws):
         pass
 
@@ -82,12 +93,6 @@ class WebSocketEventHandler():
         pass
 
 
-class WebSocketConnectionReceivedEventHandler():
-    def OnConnect(self, ws):
-        # ws.SetHandler(...)
-        # followed by getting the relevant WebSocketEventHandler events
-        pass
-        
         
         
 
@@ -236,6 +241,7 @@ class WebSocketInboundReceiver(tornado.websocket.WebSocketHandler):
         self.set_nodelay(True)
         
         ws = WebSocketInbound(self)
+        ws.SetHandler(self.handlerOnOpen)
         
         self.handlerWebSocketEvent = ws;
         
@@ -261,38 +267,62 @@ class WebSocketInboundReceiver(tornado.websocket.WebSocketHandler):
 #
 ###############################################################################
 
-class WebSocketManager():
+class WebServiceManager():
     def __init__(self):
-        self.webApp = None
-
-    # can only do this once
-    def Listen(self, handler, port, wsPath):
+        self.webApp = tornado.web.Application()
+        
+        self.wsPath__used = dict()
+        self.alreadyListening = False
+        
+    def Listen(self, port):
         retVal = 0
 
-        if not self.webApp:
-            handlerList = [
-                (wsPath, WebSocketInboundReceiver, dict(handlerOnOpen=handler))
-            ]
-
-            # Create the web App
-            self.webApp = tornado.web.Application(handlerList)
-
-            # Continue with init
+        if not self.alreadyListening:
             socketList = tornado.netutil.bind_sockets(port)
+            
             httpServer = tornado.httpserver.HTTPServer(self.webApp)
             httpServer.add_sockets(socketList)
 
             listeningPort = socketList[0].getsockname()[1]
+            
             retVal = listeningPort
-
-
-        else:
-            retVal = 0
 
         return retVal
 
+    def AddWebSocketListener(self, handler, wsPath):
+        retVal = True
+        
+        if wsPath not in self.wsPath__used:
+            handlerList = [
+                (wsPath, WebSocketInboundReceiver, dict(handlerOnOpen=handler))
+            ]
+            
+            self.webApp.add_handlers(r".*", handlerList)
+            
+            self.wsPath__used[wsPath] = True
+        else:
+            retVal = False
 
+        return retVal
 
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
 
 
 

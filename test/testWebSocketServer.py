@@ -4,7 +4,6 @@ import sys
 import os
 
 from libCore import *
-from libWebSocket import *
 
 
 
@@ -50,14 +49,15 @@ class App():
     def __init__(self, port, wsPath):
         self.port         = port
         self.wsPath       = wsPath
-        self.wsMgr        = WebSocketManager()
+        self.wsMgr        = WebServiceManager()
         self.handler      = Handler()
         self.handlerOnNew = HandlerOnNew(self.handler)
         
     def Run(self):
         Log("%s : %s" % (self.port, self.wsPath))
-
-        self.wsMgr.Listen(self.handlerOnNew, self.port, self.wsPath)
+        
+        self.wsMgr.Listen(self.port)
+        self.wsMgr.AddWebSocketListener(self.handlerOnNew, self.wsPath)
         
         WatchStdinLinesEndLoopOnEOF(self.OnKeyboardInput)
 
