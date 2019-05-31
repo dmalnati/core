@@ -270,7 +270,7 @@ class Database():
     def CreateTableIndex(self, tableName, keyFieldList, unique = False):
         if len(keyFieldList):
             keyFieldListStr = ", ".join(keyFieldList)
-            indexName       = "_".join(keyFieldList) + "_IDX"
+            indexName       = "_".join(keyFieldList) + "_IDX_" + tableName
             
             uniqueStr = ""
             if unique:
