@@ -41,17 +41,14 @@ class Handler(WebSocketEventHandler):
 class App():
     def __init__(self, addr):
         self.connectTo = addr
-        self.wsm       = WebSocketManager()
         self.webSocket = None
         self.handler   = Handler()
 
     def Run(self):
         Log("Starting")
 
-        # both of these work
-        self.webSocket = self.wsm.Connect(self.handler, self.connectTo)
-        #self.webSocket = WebSocketOutbound(self.handler, self.connectTo)
-        #self.webSocket.Connect()
+        self.webSocket = WebSocketOutbound(self.handler, self.connectTo)
+        self.webSocket.Connect()
         
         WatchStdinLinesEndLoopOnEOF(self.OnKeyboardInput)
         

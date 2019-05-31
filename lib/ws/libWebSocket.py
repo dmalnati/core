@@ -265,15 +265,6 @@ class WebSocketManager():
     def __init__(self):
         self.webApp = None
 
-    def Connect(self, handler, url):
-        wso = WebSocketOutbound(handler, url)
-        wso.Connect()
-        return wso
-
-    def ConnectCancel(self, handle):
-        wso = handle
-        wso.ConnectCancel()
-
     # can only do this once
     def Listen(self, handler, port, wsPath):
         retVal = 0
