@@ -80,6 +80,8 @@ then
     rt(){ RestartProcess.py $1 ; tail -f $L/$1.* ; }
     kp(){ KillProcess.py $1 ; }
     t(){ tail -f $L/$1.* ; }
+    vl(){ vim -R $L/$1.* ; }
+    ll(){ less $L/$1.* ; }
     serv(){ testWSAppServer.py $1 ; }
     cli(){ testWSAppClient.py $1 ; }
     
@@ -109,6 +111,8 @@ then
     complete -F GetProductListAsTabCompletion  KillProcess.py
     complete -F GetProductListAsTabCompletion  kp
     complete -F GetProductListAsTabCompletion  t
+    complete -F GetProductListAsTabCompletion  vl
+    complete -F GetProductListAsTabCompletion  ll
     complete -F GetProductListAsTabCompletion  WSReq.py
     complete -F GetProductListAsTabCompletion  testWSAppClient.py
     complete -F GetProductListAsTabCompletion  cli
