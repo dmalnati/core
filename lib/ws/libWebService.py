@@ -323,7 +323,6 @@ class WebServiceManager():
             
             handlerList = [
                 (webPath, handler, kwargs)
-                #(webPath, handler)
             ]
             
             self.webApp.add_handlers(r".*", handlerList)
