@@ -9,15 +9,10 @@
 }
 ,
 {
-    "name" : "CORE_TEST_SERVER_1",
-    "desc" : "Just a test server #1",
-    "cmd"  : "testWSAppServer.py"
-}
-,
-{
-    "name" : "CORE_TEST_SERVER_2",
-    "desc" : "Just a test server #2",
-    "cmd"  : "testWSAppServer.py"
+    "name" : "CORE_WEBSERVER",
+    "desc" : "Webserver",
+    "cmd"  : "core_Webserver.py",
+    "port" : "+80"
 }
 
 

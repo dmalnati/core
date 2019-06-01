@@ -348,6 +348,9 @@ def GenerateWSServices(directory):
                 if "port" in processDetail:
                     name = processDetail["name"]
                     port = processDetail["port"]
+
+                    if port[0] == "+":
+                        port = basePort + int(port[1:])
                     
                     if port in port__reservedBy:
                         Log("Error: ID %s reserved by %s, also by %s" %
@@ -360,7 +363,12 @@ def GenerateWSServices(directory):
             portAssignNext = basePort
             for processDetail in cfg["processDetailsList"]:
                 if "port" in processDetail:
-                    portAssign = int(processDetail["port"])
+                    port = processDetail["port"]
+                    if port[0] == "+":
+                        port = basePort + int(port[1:])
+                    else:
+                        port = int(port)
+                    portAssign = port
                 else:
                     while portAssignNext in port__reservedBy:
                         portAssignNext += 1

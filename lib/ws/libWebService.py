@@ -267,11 +267,21 @@ class WebSocketInboundReceiver(tornado.websocket.WebSocketHandler):
 #
 ###############################################################################
 
+
+class StaticFileHandler(tornado.web.StaticFileHandler):
+    pass
+
+class WebRequestHandler(tornado.web.RequestHandler):
+    pass
+
+
+
 class WebServiceManager():
     def __init__(self):
         self.webApp = tornado.web.Application()
         
         self.wsPath__used = dict()
+        self.webPath__used = dict()
         self.alreadyListening = False
         
     def Listen(self, port):
@@ -305,7 +315,23 @@ class WebServiceManager():
 
         return retVal
 
+    def AddWebRequestHandler(self, webPath, handler, **kwargs):
+        retVal = True
         
+        if webPath not in self.webPath__used:
+            self.webPath__used[webPath] = True
+            
+            handlerList = [
+                (webPath, handler, kwargs)
+                #(webPath, handler)
+            ]
+            
+            self.webApp.add_handlers(r".*", handlerList)
+        else:
+            retVal = False
+        
+        
+        return retVal
         
         
         
