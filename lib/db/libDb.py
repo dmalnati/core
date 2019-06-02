@@ -30,8 +30,7 @@ class Database():
     
     
     def GetTableList(self):
-        tableList = self.tableName__table.keys()
-        tableList.sort()
+        tableList = sorted(self.tableName__table.keys())
         
         return tableList
         
@@ -52,7 +51,7 @@ class Database():
     
     @staticmethod
     def GetDatabaseRunningFullPath():
-        dbDir      = SysDef.Get("CORE_DATABASE_RUNTIME_DIR", "/run/shm")
+        dbDir      = SysDef.Get("CORE_DATABASE_RUNTIME_DIR")
         user       = RunInfo().GetUser()
         dbFullPath = dbDir + "/" + user + "/database.db"
         

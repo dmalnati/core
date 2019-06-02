@@ -153,7 +153,7 @@ class WSApp(WSManager):
         with open(serviceFile, 'r') as file:
             fileData = file.read().rstrip('\n')
         
-            lineList = fileData.split("\n")
+            lineList = fileData.splitlines()
             
             port__seen = dict()
 

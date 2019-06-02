@@ -158,9 +158,11 @@ def GetDiskUsagePct(dirOrFile):
     output = None
     try:
         # get second line, 4th index (Use%), chars up to but not including % sign
-        retVal = int(subprocess.check_output(("df %s" % DirectoryPart(dirOrFile)).split()).split("\n")[1].split()[4][:-1])
+        outStr     = subprocess.check_output(("df %s" % DirectoryPart(dirOrFile)).split()).decode()
+        secondLine = outStr.splitlines()[1]
+        retVal     = int(secondLine.split()[4][:-1])
+
     except Exception as e:
-        print("E: %s" % e)
         pass
         
     return retVal

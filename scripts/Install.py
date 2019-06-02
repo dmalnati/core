@@ -322,6 +322,7 @@ def MergeDct(directory, fileSuffix, fileOut):
 # expected output format:
 # <service> <host> <port> <wsPath>
 def GenerateWSServices(directory):
+    SysDef.SetDir(directory)
     basePort = int(SysDef.Get("CORE_BASE_PORT"))
 
     cfgReader = ConfigReader()

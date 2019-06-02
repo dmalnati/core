@@ -12,8 +12,7 @@ def Mon():
     service__serviceDetail = RunInfo.GetServiceMap()
     service__process       = RunInfo.GetServiceProcessMap()
 
-    serviceList = service__serviceDetail.keys()
-    serviceList.sort()
+    serviceList = sorted(service__serviceDetail.keys())
 
     state         = ServerState().GetState()
     stateDuration = ServerState().GetDurationOfCurrentStateFormatted()
@@ -22,7 +21,7 @@ def Mon():
     capacityCheckThresholdPct = int(SysDef().Get("CORE_DATABASE_CAPACITY_CHECK_THRESHOLD_PCT"))
     pct = GetDiskUsagePct(Database.GetDatabaseRunningFullPath())
     pctStr = "-"
-    if pct:
+    if pct != None:
         pctStr = "%s%%" % pct
 
 

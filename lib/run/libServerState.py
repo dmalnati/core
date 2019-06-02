@@ -35,6 +35,7 @@ class ServerState():
     def GetStateLock(self):
         retVal = False
 
+        SafeMakeDir(DirectoryPart(self.stateFile))
         self.fd = self.fl.GetWriteAppendLockedFd()
 
         if self.fd:

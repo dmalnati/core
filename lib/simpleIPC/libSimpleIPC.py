@@ -67,7 +67,7 @@ class SimpleIPCMessage(object):
         setterList = []
 
         # get attrs in order the hard way
-        for line in inspect.getsource(self.__class__).split("\n"):
+        for line in inspect.getsource(self.__class__).splitlines():
             m = re.match(r"^ *def (Set.+)\(.*", line)
 
             if m:
@@ -81,7 +81,7 @@ class SimpleIPCMessage(object):
         getterList = []
 
         # get attrs in order the hard way
-        for line in inspect.getsource(self.__class__).split("\n"):
+        for line in inspect.getsource(self.__class__).splitlines():
             m = re.match(r"^ *def (Get.+)\(.*", line)
 
             if m:

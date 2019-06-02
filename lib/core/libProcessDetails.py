@@ -25,7 +25,7 @@ class ProcessDetails():
         global processDetailsConfig
         ProcessDetails.InitIfNecessary()
 
-        return processDetailsConfig.keys()
+        return list(processDetailsConfig.keys())
     
 
     @staticmethod

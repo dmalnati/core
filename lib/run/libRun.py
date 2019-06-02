@@ -27,7 +27,8 @@ class RunInfo():
                 subprocess.check_output(['ps',
                                          '-U', user,
                                          '-o', 'ppid,pid,%cpu,%mem,cmd']).strip()
-            lineList = output.split("\n")
+            output = output.decode()
+            lineList = output.splitlines()
 
             # ignore the header line
             for line in lineList[1:]:
@@ -41,7 +42,7 @@ class RunInfo():
                 process["CMD"]  = " ".join(linePartList[4:])
 
                 processList.append(process)
-        except:
+        except Exception as e:
             pass
 
         return processList
@@ -60,7 +61,7 @@ class RunInfo():
         service__process = dict()
 
         # First, find the name of all service names
-        cfg = ConfigReader().ReadConfig("ProcessDetails.master.json")
+        cfg = ConfigReader().ReadConfigOrAbort("ProcessDetails.master.json")
 
         nameList = []
         for processDetail in cfg["processDetailsList"]:
@@ -109,7 +110,7 @@ class RunInfo():
 
     @staticmethod
     def GetServiceMap():
-        cfg = ConfigReader().ReadConfig("ProcessDetails.master.json")
+        cfg = ConfigReader().ReadConfigOrAbort("ProcessDetails.master.json")
 
         service__serviceDetail = dict()
 

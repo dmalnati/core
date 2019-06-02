@@ -29,8 +29,7 @@ def Main():
 
     service__serviceDetail = RunInfo.GetServiceMap()
 
-    serviceList = service__serviceDetail.keys()
-    serviceList.sort()
+    serviceList = sorted(service__serviceDetail.keys())
 
     ss = ServerState()
 
