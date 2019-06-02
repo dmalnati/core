@@ -6,54 +6,50 @@ import os
 from libCore import *
 
 
-class App(WSApp):
+class App(WSAppWebserver):
     def __init__(self):
-        WSApp.__init__(self)
+        WSAppWebserver.__init__(self)
         
-        self.webRoot = CorePath("/core/web")
-        Log("Serving pages from: %s" % self.webRoot)
 
-        self.db = ManagedDatabase(self)
+    def OnWebserverReady(self):
+        Log("Loading extensions")
+    
+        # As the core webserver, default to directing to the core web
+        self.SetRootRedirectPath("/core/")
         
-        app = self
-        
-        class FaviconHandler(WebRequestHandler):
-            def get(self, *args, **kwargs):
-                pass
+        # Load extensions
+        productList = ["core"]
+    
+        for product in productList:
+            # Set up any dynamic handlers
+            Log("Attempting to import %s" % product)
+            module = None
+            try:
+                module = __import__("%s_Web" % product)
+                Log("  Success")
+            except Exception as e:
+                Log("  Failure: %s" % e)
+                
+            if module:
+                moduleOk = True
+                try:
+                    module.Init(self)
+                except Exception as e:
+                    Log("Error initializing: %s" % e)
+                    moduleOk = False
+                
+                if moduleOk:
+                    try:
+                        self.EnableStaticFileHandlerForProduct(product)
+                    except Exception as e:
+                        Log("Failed to register static handler: %s" % e)
 
-        self.AddWebRequestHandler(r"/favicon.ico", FaviconHandler)
-        self.AddWebRequestHandler(r"/()", StaticFileHandler, **{
-            "path"             : self.webRoot,
-            "default_filename" : "index.html",
-        })
-        self.AddWebRequestHandler(r"/(index.html)$", StaticFileHandler, **{
-            "path"             : self.webRoot,
-            "default_filename" : "index.html",
-        })
-        
-        
-        
-        
-    def Run(self):
-        Log("Waiting for Database Available to begin")
+                        
+        Log("Done imports")
+        Log("Webserver ready")
         Log("")
         
-        self.db.SetCbOnDatabaseStateChange(self.OnDatabaseStateChange)
         
-        evm_MainLoop()
-
-    def OnDatabaseAvaiable(self):
-        Log("Database Available, starting")
-
-    def OnDatabaseClosing(self):
-        Log("Database Closing, no action taken")
-        
-    def OnDatabaseStateChange(self, dbState):
-        if dbState == "DATABASE_AVAILABLE":
-            self.OnDatabaseAvaiable()
-        if dbState == "DATABASE_CLOSING":
-            self.OnDatabaseClosing()
-
         
         
 

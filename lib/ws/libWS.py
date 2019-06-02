@@ -1,5 +1,6 @@
 import os
 import time
+import inspect
 
 import json
 
@@ -320,8 +321,14 @@ class WSManager(WebServiceManager,
                         # keep track of this socket
                         self.wsManager.OnWSConnectInbound(ws)
                         
+                        # Set the handler to handle the ws events also if it
+                        # seems to be capable, otherwise leave unset, meaning
+                        # the events will be handled at a lower level but not
+                        # propigate upward.
+                        if self.wsManager.CapableOfWSEventHandler(self.wsManager.listenHandler):
+                            ws.SetHandler(self.wsManager.listenHandler)
+                        
                         # tell the upper layer
-                        ws.SetHandler(self.wsManager)
                         self.wsManager.listenHandler.OnWSConnectIn(ws)
                     else:
                         err = True
@@ -376,7 +383,9 @@ class WSManager(WebServiceManager,
                 self.wsManager.OnWSNonPrimaryConnectInbound(ws)
                 
                 # tell the upper layer
-                ws.SetHandler(self.listenHandler)
+                if self.wsManager.CapableOfWSEventHandler(self.listenHandler):
+                    ws.SetHandler(self.listenHandler)
+                    
                 self.listenHandler.OnWSConnectIn(ws)
         
         handlerNonPrimary = NonPrimaryWSListener(self, handler)
@@ -440,6 +449,32 @@ class WSManager(WebServiceManager,
     #############################
     # Private
     #############################
+    
+    def CapableOfWSEventHandler(self, handler):
+        retVal = True
+        
+        # list of tuples (fnName, code)
+        eventHandlerMemberList = inspect.getmembers(WSEventHandler(), predicate=inspect.ismethod)
+        handlerMemberList = inspect.getmembers(handler, predicate=inspect.ismethod)
+    
+        # build list of fnNames in event handler
+        eventHandlerFnList = []
+        for member in eventHandlerMemberList:
+            fnName = member[0]
+            eventHandlerFnList.append(fnName)
+        
+        # build list of fnNames in handler
+        handlerFnList = []
+        for member in handlerMemberList:
+            fnName = member[0]
+            handlerFnList.append(fnName)    
+        
+        # check all necessary exist
+        for fn in eventHandlerFnList:
+            if fn not in handlerFnList:
+                retVal = False
+        
+        return retVal
     
     #############################
     # WebSocketConnectionReceivedEventHandler
