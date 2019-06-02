@@ -75,7 +75,7 @@ class WSAppWebserver(WSApp):
             self.OnDatabaseClosing()
 
     def EnableStaticFileHandlerForProduct(self, product):
-        webRoot = CorePath("/%s/web/webroot" % product)
+        webRoot = CorePath("/%s/web" % product)
         
         # make something like "/product/(.*)$
         regex = r"/" + re.escape(product) + "/(.*)$"
