@@ -25,7 +25,8 @@ def Mon():
         pctStr = "%s%%" % pct
 
 
-    subprocess.call("tput clear".split())
+    if sys.stdout.isatty():
+        subprocess.call("tput clear".split())
 
     
     print("State: %s (for %s)" % (state, stateDuration))

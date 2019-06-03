@@ -11,6 +11,7 @@ class Handler():
         
     def Init(self):
         self.SetUpWebSocketHandler()
+        self.SetUpWebSocketHandlerMon()
         self.SetUpDynamicStatusHandler()
     
     
@@ -28,6 +29,11 @@ class Handler():
 
         handler = WebSocketHandler()
         self.webServer.AddWSListener(handler, "/core/ws")
+        
+    def SetUpWebSocketHandlerMon(self):
+        pub = WSPublisherCommandInterval("Mon.py", 1)
+
+        self.webServer.AddWSListener(pub, "/core/ws/mon")
         
         
     def SetUpDynamicStatusHandler(self):

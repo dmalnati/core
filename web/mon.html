@@ -1,0 +1,110 @@
+<html>
+    <head>
+        <title>Mon</title>
+        
+        <style>
+* {
+    font-family: 'Courier New', Courier, 'Lucida Sans Typewriter', 'Lucida Typewriter', monospace;
+    font-size: 10pt;
+}
+        </style>
+    </head>
+    
+    <script src="/core/js/libWS.js"></script>
+    <script>
+'use strict'
+    
+class Handler extends WSEventHandler
+{
+    OnConnect(ws)
+    {
+        document.getElementById("status").innerHTML = "Connected";
+    }
+    
+    OnMessage(ws, msg)
+    {
+        let blob = msg["UPDATE"]
+
+        let html = blob.split("\n").join("<br>\n")
+        html = html.split(" ").join("&nbsp;")
+
+        document.getElementById("target").innerHTML = html;
+    }
+    
+    OnClose(ws)
+    {
+        document.getElementById("target").innerHTML = "";
+
+        Connect()
+    }
+    
+    OnError(ws)
+    {
+        document.getElementById("status").innerHTML = "Error";
+        document.getElementById("target").innerHTML = "";
+    }
+}
+
+function Connect()
+{
+    let url = window.location.href;
+    let arr = url.split("/");
+    
+    let hostAndPort = arr[2];
+    
+    let addr = "ws://" + hostAndPort + "/core/ws/mon";
+
+    let ws = WSManager.Connect(new Handler(), addr);
+
+    document.getElementById("status").innerHTML = "Attempting connection";
+}
+
+    </script>
+    
+    <body onload='Connect();'>
+        <div id='status'></div>
+        <br/>
+        <div id='target'></div>
+    </body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -43,13 +43,17 @@ class WS extends WebSocket
     
     OnOpen(event)
     {
-        console.log("onopen");
         this.handler.OnConnect(this);
+    }
+    
+    OnClose(event)
+    {
+        this.handler.OnClose(this);
     }
     
     OnMessage(event)
     {
-        msg = JSON.parse(event.data);
+        let msg = JSON.parse(event.data);
 
         this.handler.OnMessage(this, msg);
     }
@@ -65,7 +69,16 @@ class WSManager
 {
     static Connect(handler, addr)
     {
-        return new WS(handler, addr);
+        let ws = new WS(handler, addr);
+
+        // necessary because seemingly the base class is clobbering
+        // the member functions of the same name (when I tried using them).
+        ws.onopen    = ws.OnOpen;
+        ws.onclose   = ws.OnClose;
+        ws.onmessage = ws.OnMessage;
+        ws.onerror   = ws.OnError;
+        
+        return ws;
     }
 }
 
