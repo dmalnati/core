@@ -7,6 +7,150 @@ from libWSApp import *
 from libWebPythonPage import *
 
 
+
+class AsyncGetter():
+    def Start(self):
+        pass
+
+    def Stop(self):
+        pass
+
+        
+
+class AsyncGetterEventHandler():
+    def OnData(self, buf):
+        pass
+
+        
+        
+        
+class AsyncGetterCmdInterval(AsyncGetter):
+    def __init__(self, handler, cmd, intervalSec):
+        self.handler     = handler
+        self.cmd         = cmd
+        self.cmdHandle   = None
+        self.intervalSec = intervalSec
+        self.timer       = None
+        self.bufTotal    = ""
+        
+    def Start(self):
+        self.CancelTimerIfAny()
+        
+        if not self.cmdHandle:
+            self.bufTotal = ""
+            self.cmdHandle = evm_WatchCommand(self.OnCmdData, self.cmd)
+
+    def Stop(self):
+        self.CancelTimerIfAny()
+    
+        if self.cmdHandle:
+            evm_UnWatchCommand(self.cmdHandle)
+            self.cmdHandle = None
+        
+        
+    def OnCmdData(self, buf):
+        if buf:
+            self.bufTotal += buf
+        else:
+            self.handler.OnData(self.bufTotal)
+            self.bufTotal = ""
+            self.cmdHandle = None
+            
+            self.timer = evm_SetTimeout(self.OnTimeout, self.intervalSec * 1000)
+    
+    def OnTimeout(self):
+        self.timer = None
+        self.Start()
+        
+    def CancelTimerIfAny(self):
+        if self.timer:
+            evm_CancelTimeout(self.timer)
+            self.timer = None
+        
+
+        
+        
+        
+
+
+class WSPublisher(WSEventHandler, AsyncGetterEventHandler):
+    def __init__(self, getter):
+        self.getter = getter
+        
+        self.updLast = None
+        
+        self.ws__data = dict()
+        
+    ################################
+    #
+    # Distribute updates
+    #
+    ################################
+        
+    def SendUpdate(self, ws, upd):
+        ws.Write({
+            "MESSAGE_TYPE" : "PUB_UPDATE", 
+            "UPDATE"       : upd,
+        })
+        
+    def BroadcastUpdate(self, upd):
+        for ws in self.ws__data:
+            self.SendUpdate(ws, upd)
+    
+    
+    ################################
+    #
+    # Handle WebSocket events
+    #
+    ################################
+
+    def OnWSConnectIn(self, ws):
+        self.ws__data[ws] = True
+        
+        if len(self.ws__data.keys()) != 0:
+            self.getter.Start()
+        else:
+            if self.updLast:
+                self.SendUpdate(ws, self.updLast)
+
+    def OnClose(self, ws):
+        self.ws__data.pop(ws)
+        
+        if len(self.ws__data.keys()) == 0:
+            self.getter.Stop()
+            self.updLast = None
+
+        
+    ################################
+    #
+    # Handle AsyncGetterEventHandler updates
+    #
+    ################################
+    
+    def OnData(self, buf):
+        if buf:
+            self.updLast = buf
+            self.BroadcastUpdate(self.updLast)
+        else:
+            self.updLast = None
+            
+            for ws in list(self.ws__data.keys()):
+                ws.Close()
+                self.ws__data.pop(ws)
+    
+
+
+class WSPublisherCommandInterval(WSPublisher, AsyncGetterEventHandler):
+    def __init__(self, cmd, intervalSec):
+        self.getter = AsyncGetterCmdInterval(self, cmd, intervalSec)
+        WSPublisher.__init__(self, self.getter)
+
+
+
+
+
+        
+
 class WSAppWebserver(WSApp):
     def __init__(self):
         WSApp.__init__(self)
