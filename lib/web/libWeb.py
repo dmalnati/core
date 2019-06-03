@@ -88,10 +88,12 @@ class WSPublisher(WSEventHandler, AsyncGetterEventHandler):
     ################################
         
     def SendUpdate(self, ws, upd):
-        ws.Write({
+        msg = {
             "MESSAGE_TYPE" : "PUB_UPDATE", 
             "UPDATE"       : upd,
-        })
+        }
+        
+        ws.Write(msg)
         
     def BroadcastUpdate(self, upd):
         for ws in self.ws__data:
@@ -128,7 +130,7 @@ class WSPublisher(WSEventHandler, AsyncGetterEventHandler):
     ################################
     
     def OnData(self, buf):
-        if buf:
+        if buf != None:
             self.updLast = buf
             self.BroadcastUpdate(self.updLast)
         else:
@@ -146,6 +148,64 @@ class WSPublisherCommandInterval(WSPublisher, AsyncGetterEventHandler):
         WSPublisher.__init__(self, self.getter)
 
 
+        
+        
+        
+        
+        
+        
+class AsyncGetterDatabaseCount(AsyncGetter):
+    def __init__(self, handler, intervalSec):
+        self.handler     = handler
+        self.intervalSec = intervalSec
+        self.timer       = None
+        
+        self.db = None
+        
+    def Start(self):
+        if not self.db:
+            self.db = Database()
+            self.db.Connect()
+    
+        self.CancelTimerIfAny()
+        
+        # schedule the first one immediately
+        self.ScheduleNext(0)
+
+    def Stop(self):
+        self.CancelTimerIfAny()
+    
+    def ScheduleNext(self, durationSec):
+        self.timer = evm_SetTimeout(self.OnTimeout, durationSec * 1000)
+    
+    def OnTimeout(self):
+        name__value = dict()
+        
+        for table in self.db.GetTableList():
+            count = self.db.GetTable(table).Count()
+            
+            name__value[table] = count
+        
+        self.handler.OnData(name__value)
+        
+        self.ScheduleNext(self.intervalSec)
+        
+    def CancelTimerIfAny(self):
+        if self.timer:
+            evm_CancelTimeout(self.timer)
+            self.timer = None
+        
+        
+        
+        
+        
+        
+        
+
+class WSPublisherDatabaseCountInterval(WSPublisher, AsyncGetterEventHandler):
+    def __init__(self, intervalSec):
+        self.getter = AsyncGetterDatabaseCount(self, intervalSec)
+        WSPublisher.__init__(self, self.getter)
 
 
 

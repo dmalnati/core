@@ -1,10 +1,11 @@
 <html>
     <head>
-        <title>Mon</title>
+        <title>DB</title>
         
         <link rel="stylesheet" href="/core/css/core.css">
     </head>
     
+    <script src="/core/js/libUtl.js"></script>
     <script src="/core/js/libWS.js"></script>
     <script>
 'use strict'
@@ -18,11 +19,26 @@ class Handler extends WSEventHandler
     
     OnMessage(ws, msg)
     {
-        let blob = msg["UPDATE"]
+        let name__value = msg["UPDATE"]
 
-        let html = blob.split("\n").join("<br>\n")
-        html = html.split(" ").join("&nbsp;")
+        console.log(name__value)
 
+        let nameList = Object.keys(name__value).sort()
+        console.log(nameList)
+
+        let html  = "";
+        html += "<table>";
+        html += "<tr><th>table</th><th>count</th></tr>";
+
+        for (name of nameList)
+        {
+            html += "<tr><td>" + name + "</td>";
+            html += "<td style='text-align: right'>" + Commas(name__value[name]);
+            html += "</td></tr>";
+        }
+            
+        html += "</table>";
+            
         document.getElementById("target").innerHTML = html;
     }
     
@@ -47,7 +63,7 @@ function Connect()
     
     let hostAndPort = arr[2];
     
-    let addr = "ws://" + hostAndPort + "/core/ws/mon";
+    let addr = "ws://" + hostAndPort + "/core/ws/db";
 
     let ws = WSManager.Connect(new Handler(), addr);
 
