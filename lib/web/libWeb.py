@@ -155,18 +155,14 @@ class WSPublisherCommandInterval(WSPublisher, AsyncGetterEventHandler):
         
         
 class AsyncGetterDatabaseCount(AsyncGetter):
-    def __init__(self, handler, intervalSec):
+    def __init__(self, db, handler, intervalSec):
         self.handler     = handler
         self.intervalSec = intervalSec
         self.timer       = None
         
-        self.db = None
+        self.db = db
         
     def Start(self):
-        if not self.db:
-            self.db = Database()
-            self.db.Connect()
-    
         self.CancelTimerIfAny()
         
         # schedule the first one immediately
@@ -203,8 +199,8 @@ class AsyncGetterDatabaseCount(AsyncGetter):
         
 
 class WSPublisherDatabaseCountInterval(WSPublisher, AsyncGetterEventHandler):
-    def __init__(self, intervalSec):
-        self.getter = AsyncGetterDatabaseCount(self, intervalSec)
+    def __init__(self, db, intervalSec):
+        self.getter = AsyncGetterDatabaseCount(db, self, intervalSec)
         WSPublisher.__init__(self, self.getter)
 
 

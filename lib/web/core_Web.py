@@ -37,7 +37,7 @@ class Handler():
         self.webServer.AddWSListener(pub, "/core/ws/mon")
         
     def SetUpWebSocketHandlerDbCount(self):
-        pub = WSPublisherDatabaseCountInterval(1)
+        pub = WSPublisherDatabaseCountInterval(self.webServer.db, 1)
 
         self.webServer.AddWSListener(pub, "/core/ws/db")
         
