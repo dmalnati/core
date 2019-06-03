@@ -185,6 +185,8 @@ class WebSocketInbound():
         self.wsInboundRecieverInstance = wsInboundRecieverInstance
         
         self.handler = None
+        
+        self.closed = False
 
     #############################
     # Public
@@ -194,10 +196,17 @@ class WebSocketInbound():
         self.handler = handler
     
     def Write(self, msg):
-        self.wsInboundRecieverInstance.write_message(msg)
+        if self.closed:
+            pass
+        else:
+            self.wsInboundRecieverInstance.write_message(msg)
 
     def Close(self):
-        self.wsInboundRecieverInstance.close()
+        if self.closed:
+            pass
+        else:
+            self.closed = True
+            self.wsInboundRecieverInstance.close()
     
     
     #############################
@@ -205,12 +214,19 @@ class WebSocketInbound():
     #############################
 
     def OnMessage(self, msg):
-        if self.handler:
-            self.handler.OnMessage(self, msg)
+        if self.closed:
+            pass
+        else:
+            if self.handler:
+                self.handler.OnMessage(self, msg)
 
     def OnClose(self):
-        if self.handler:
-            self.handler.OnClose(self)
+        if self.closed:
+            pass
+        else:
+            self.closed = True
+            if self.handler:
+                self.handler.OnClose(self)
 
 
             

@@ -503,7 +503,10 @@ class WSManager(WebServiceManager,
         self.wsOutbound__data[ws] = True
     
     def OnWSCloseOutbound(self, ws):
-        self.wsOutbound__data.pop(ws)
+        if ws in self.wsOutbound__data:
+            self.wsOutbound__data.pop(ws)
+        else:
+            Log("ERR: OnWSCloseOutbound ws closed but not in list")
     
     
     
@@ -515,8 +518,10 @@ class WSManager(WebServiceManager,
         self.wsInbound__data[ws] = True
     
     def OnWSCloseInbound(self, ws):
-        self.wsInbound__data.pop(ws)
-        
+        if ws in self.wsInbound__data:
+            self.wsInbound__data.pop(ws)
+        else:
+            Log("ERR: OnWSCloseInbound ws closed but not in list")
         
         
     #############################
@@ -527,8 +532,10 @@ class WSManager(WebServiceManager,
         self.wsInboundNonPrimary__data[ws] = True
     
     def OnWSNonPrimaryCloseInbound(self, ws):
-        self.wsInboundNonPrimary__data.pop(ws)
-        
+        if ws in self.wsInboundNonPrimary__data:
+            self.wsInboundNonPrimary__data.pop(ws)
+        else:
+            Log("ERR: OnWSNonPrimaryCloseInbound ws closed but not in list")
         
         
         
