@@ -85,6 +85,13 @@ class WSApp(WSManager):
 
     def GetSelfServiceData(self):
         return self.serviceData
+
+    def GetSelfServiceName(self):
+        data = self.GetSelfServiceData()
+
+        service = data["service"]
+
+        return service
         
 
     #############################

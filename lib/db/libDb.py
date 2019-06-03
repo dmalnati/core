@@ -404,7 +404,11 @@ class Table():
         return [field for field in self.GetFieldList() if field not in self.GetKeyFieldList()]
     
     def GetRecordAccessor(self):
-        return Record(self)
+        name__value = dict()
+        for field in self.GetFieldList():
+            name__value[field] = ""
+
+        return Record(self, name__value)
         
     def Count(self):
         retVal = 0
@@ -665,6 +669,18 @@ class Record():
     
     
     
+    # copies fields from another record, even from another table.
+    # does not clear its own values first.
+    # copies only fields it currently has which overlap with second record
+    def CopyIntersection(self, rec):
+        name__value = rec.GetDict()
+
+        self.CopyDictIntersection(name__value)
+
+    def CopyDictIntersection(self, name__value):
+        for key in self.name__value.keys():
+            if key in name__value:
+                self.name__value[key] = str(name__value[key])
     
     
     ###############################
@@ -673,6 +689,7 @@ class Record():
     ##
     ###############################
         
+    # clears itself first, then copies in values
     def Overwrite(self, name__value):
         self.Reset()
         
