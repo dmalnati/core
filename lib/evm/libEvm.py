@@ -4,6 +4,9 @@ import signal
 import sys
 import time
 
+import fcntl
+import subprocess
+
 from libUtl import *
 
 import tornado.ioloop
@@ -30,20 +33,77 @@ def evm_CancelTimeout(handle):
 def evm_MainLoopFinish():
     tornado.ioloop.IOLoop.instance().stop()
 
-def evm_MainLoop(stopOnCtlC=True):
-    if stopOnCtlC:
-        def SignalHandler(signal, frame):
-            evm_MainLoopFinish()
+def evm_MainLoop():
+    def SignalHandler(signal, frame):
+        loop = tornado.ioloop.IOLoop.instance()
+        loop.add_callback_from_signal(evm_MainLoopFinish)
 
-        signal.signal(signal.SIGINT, SignalHandler)
+    signal.signal(signal.SIGINT, SignalHandler)
 
     def SignalHandlerTerm(signal, frame):
         Log("Terminated, quitting")
-        evm_MainLoopFinish()
+        loop = tornado.ioloop.IOLoop.instance()
+        loop.add_callback_from_signal(evm_MainLoopFinish)
 
     signal.signal(signal.SIGTERM, SignalHandlerTerm)
 
     tornado.ioloop.IOLoop.instance().start()
+
+
+# expect to get async buffers back, until closed, then get None.
+# returns a handle you can stop watching with.
+def evm_WatchCommand(handler, cmd):
+    process = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
+
+    def Handler(fd):
+        bufTotal = ""
+
+        READ_SIZE = 8192
+        buf = fd.read(READ_SIZE)
+        while buf and len(buf) == READ_SIZE:
+            bufTotal += buf.decode()
+
+            buf = fd.read(READ_SIZE)
+        if buf:
+            bufTotal += buf.decode()
+
+        if len(bufTotal) == 0:
+            evm_UnWatchFd(fd)
+            process.wait()
+            handler(None)
+        else:
+            handler(bufTotal)
+
+    evm_WatchFd(Handler, process.stdout)
+
+    return process
+
+
+def evm_UnWatchCommand(handle):
+    process = handle
+
+    evm_UnWatchFd(process.stdout)
+    process.kill()
+
+
+# assumes you want async
+def evm_WatchFd(handler, fd):
+    def Handler(fd, events):
+        handler(fd)
+
+    # make non-blocking
+    fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+    fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+
+    # add to fd monitoring
+    loop = tornado.ioloop.IOLoop.instance()
+    loop.add_handler(fd, Handler, tornado.ioloop.IOLoop.READ)
+
+
+def evm_UnWatchFd(fd):
+    loop = tornado.ioloop.IOLoop.instance()
+    loop.remove_handler(fd)
+    
 
 
 #######################################################################
