@@ -4,6 +4,7 @@ import re
 
 from libDbManaged import *
 from libWSApp import *
+from libWebPythonPage import *
 
 
 class WSAppWebserver(WSApp):
@@ -36,7 +37,7 @@ class WSAppWebserver(WSApp):
             def initialize(self, **name__value):
                 self.webserver = name__value["webserver"]
         
-            def get(self, *argList):
+            def get(self):
                 redirectPath = self.webserver.GetRootRedirectPath()
                 
                 if redirectPath:
@@ -44,7 +45,7 @@ class WSAppWebserver(WSApp):
                 else:
                     self.write("Webserver not ready")
         
-        self.AddWebRequestHandler(r"/()$", BaseUrlRedirector, **{
+        self.AddWebRequestHandler(r"/$", BaseUrlRedirector, **{
             "webserver" : self,
         })
         
@@ -77,12 +78,36 @@ class WSAppWebserver(WSApp):
     def EnableStaticFileHandlerForProduct(self, product):
         webRoot = CorePath("/%s/web" % product)
         
-        # make something like "/product/(.*)$
-        regex = r"/" + re.escape(product) + "/(.*)$"
         
+        regex = r"/" + re.escape(product) + "/(.*\.pyp)$"
+        self.AddWebRequestHandler(regex, PythonPageFileHandler, **{
+            "path" : webRoot,
+            "db"   : self.db,  
+        })
+        
+        regex = r"/" + re.escape(product) + "/(.*)$"
         self.AddWebRequestHandler(regex, StaticFileHandler, **{
             "path"             : webRoot,
             "default_filename" : "index.html",
         })
-            
+
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
             
