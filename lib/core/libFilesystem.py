@@ -97,6 +97,11 @@ def SafeRemoveFileIfExists(file):
     if FileExists(file):
         os.unlink(file)
 
+def MakeTmpDir():
+    directory = "/tmp/" + str(os.getpid())
+    SafeMakeDir(directory)
+    return directory
+
 def DeleteFilesInDir(directory):
     retVal = True
 

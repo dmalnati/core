@@ -1,3 +1,4 @@
+import sys
 import time
 import datetime
 import binascii
@@ -46,14 +47,14 @@ def DateTimeStrDiffSec(dtStr1, dtStr2):
 def SecsToDuration(secs):
     return str(datetime.timedelta(seconds=secs))
     
-logDateAlso = False
+logDateAlso = True
 
 def LogIncludeDate(yesNo):
     global logDateAlso
 
     logDateAlso = yesNo
 
-def Log(msg):
+def Log(msg, fileOut = sys.stdout):
     global logDateAlso
 
     logStr = ""
@@ -67,9 +68,9 @@ def Log(msg):
     logStr += "]: "
     logStr += str(msg)
 
-    print(logStr)
+    print(logStr, file = fileOut)
 
-def LogCsv(msg):
+def LogCsv(msg, fileOut = sys.stdout):
     global logDateAlso
 
     logStr = ""
@@ -82,7 +83,7 @@ def LogCsv(msg):
     logStr += ", "
     logStr += msg
 
-    print(logStr)
+    print(logStr, file = fileOut)
 
 
 def Commas(strToFormat):

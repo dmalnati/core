@@ -24,6 +24,12 @@ def ActuallyRun(service, cmd):
     # Create and open log file
     fdOut = open(logFileName, "w")
 
+    # Print command being executed into the log file
+    Log("Starting %s" % service, fdOut)
+    Log(cmd, fdOut)
+    Log("", fdOut)
+    fdOut.flush()
+
     # make sure parent takes out child when it goes
     libc = ctypes.CDLL("libc.so.6")
     def set_pdeathsig(sig = signal.SIGTERM):
