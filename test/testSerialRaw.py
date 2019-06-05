@@ -142,7 +142,7 @@ def PreprocessInput(byteList):
                 byte = "\r"
 
         if useByte:
-            byteListNew.extend(byte)
+            byteListNew.append(byte)
 
     return byteListNew
 
@@ -211,11 +211,17 @@ def Main():
                     sys.stdout.write("\n")
                     sys.stdout.flush()
         else:
-            sys.stdout.write(byteList)
+            data = ""
+            try:
+                data = byteList.decode()
+            except:
+                pass
+
+            sys.stdout.write(data)
             sys.stdout.flush()
 
     def OnKeyboardReadable(byteList):
-        byteList = PreprocessInput(byteList)
+        byteList = PreprocessInput(byteList.encode())
 
         if len(byteList):
             ser.Send(byteList)
