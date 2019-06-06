@@ -10,6 +10,8 @@ class App(WSAppWebserver):
     def __init__(self):
         WSAppWebserver.__init__(self)
         
+        self.productLoadedList = []
+        
 
     def OnWebserverReady(self):
         Log("Loading extensions")
@@ -18,7 +20,7 @@ class App(WSAppWebserver):
         self.SetRootRedirectPath("/core/")
         
         # Load extensions
-        productList = ["core"]
+        productList = GetProductList()
     
         for product in productList:
             # Set up any dynamic handlers
@@ -39,6 +41,8 @@ class App(WSAppWebserver):
                     moduleOk = False
                 
                 if moduleOk:
+                    self.productLoadedList.append(product)
+                
                     try:
                         self.EnableStaticFileHandlerForProduct(product)
                     except Exception as e:

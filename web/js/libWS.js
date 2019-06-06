@@ -67,8 +67,20 @@ class WS extends WebSocket
 
 class WSManager
 {
-    static Connect(handler, addr)
+    static Connect(handler, addrIn)
     {
+        let addr = addrIn;
+
+        // Support just specifying absolute path to local server
+        if (addr[0] == "/")
+        {
+            let url = window.location.href;
+            let arr = url.split("/");
+            let hostAndPort = arr[2];
+
+            addr = "ws://" + hostAndPort + addrIn;
+        }
+
         let ws = new WS(handler, addr);
 
         // necessary because seemingly the base class is clobbering

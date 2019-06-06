@@ -74,6 +74,7 @@ then
     alias cs="cd $CORE/core/scripts"
     alias ct="cd $CORE/core/test"
     alias cl="cd $CORE/core/lib"
+    alias cw="cd $CORE/core/web"
     
     sp(){ StartProcess.py $1 ; }
     st(){ StartProcess.py $1 ; tail -f $L/$1.* ; }

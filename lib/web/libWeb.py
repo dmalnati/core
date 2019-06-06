@@ -2,6 +2,8 @@ import sys
 import os
 import re
 
+import mimetypes
+
 from libDbManaged import *
 from libWSApp import *
 from libWebPythonPage import *
@@ -216,6 +218,11 @@ class WSAppWebserver(WSApp):
         
         self.SetupFavicon()
         self.SetupRootRedirector()
+        self.SetupMimeTypes()
+        
+        
+    def SetupMimeTypes(self):
+        mimetypes.add_type("text/html", ".pyp")
 
     
     def SetupFavicon(self):
@@ -288,7 +295,7 @@ class WSAppWebserver(WSApp):
         regex = r"/" + re.escape(product) + "/(.*)$"
         self.AddWebRequestHandler(regex, StaticFileHandler, **{
             "path"             : webRoot,
-            "default_filename" : "index.html",
+            "default_filename" : "index.pyp",
         })
 
         
