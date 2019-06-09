@@ -1,6 +1,7 @@
 'use strict'
 
 
+export
 class WSEventHandler
 {
     OnConnect(ws)
@@ -21,6 +22,7 @@ class WSEventHandler
 }
 
 
+export
 class WS extends WebSocket
 {
     constructor(handler, addr)
@@ -65,6 +67,7 @@ class WS extends WebSocket
 }
 
 
+export
 class WSManager
 {
     static Connect(handler, addrIn)
