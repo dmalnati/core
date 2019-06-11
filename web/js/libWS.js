@@ -31,6 +31,8 @@ class WS extends WebSocket
         
         this.handler = handler;
         this.addr    = addr;
+        
+        this.closedByMe = false;
     }
     
     Write(msg)
@@ -41,6 +43,8 @@ class WS extends WebSocket
     Close()
     {
         this.close();
+        
+        this.closedByMe = true;
     }
     
     OnOpen(event)
@@ -50,7 +54,10 @@ class WS extends WebSocket
     
     OnClose(event)
     {
-        this.handler.OnClose(this);
+        if (!this.closedByMe)
+        {
+            this.handler.OnClose(this);
+        }
     }
     
     OnMessage(event)
@@ -62,7 +69,10 @@ class WS extends WebSocket
     
     OnError(event)
     {
-        this.handler.OnError(this);
+        if (!this.closedByMe)
+        {
+            this.handler.OnError(this);
+        }
     }
 }
 

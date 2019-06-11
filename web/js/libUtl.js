@@ -8,45 +8,125 @@ function Commas(x) {
 
 // https://flaviocopes.com/javascript-dates/
 export
-function GetTime(d = Date())
+function GetTime(d = new Date())
 {
-    let dayOfWeek = new Array(7);
-    dayOfWeek[0]=  "Sun";
-    dayOfWeek[1] = "Mon";
-    dayOfWeek[2] = "Tue";
-    dayOfWeek[3] = "Wed";
-    dayOfWeek[4] = "Thu";
-    dayOfWeek[5] = "Fri";
-    dayOfWeek[6] = "Sat";
+    let dayOfWeekArr = new Array(7);
+    dayOfWeekArr[0] = "Sun";
+    dayOfWeekArr[1] = "Mon";
+    dayOfWeekArr[2] = "Tue";
+    dayOfWeekArr[3] = "Wed";
+    dayOfWeekArr[4] = "Thu";
+    dayOfWeekArr[5] = "Fri";
+    dayOfWeekArr[6] = "Sat";
     
-    let monthOfYear = new Array(12);
-    monthOfYear[0] = "Jan";
-    monthOfYear[1] = "Feb";
-    monthOfYear[2] = "Mar";
-    monthOfYear[3] = "Apr";
-    monthOfYear[4] = "May";
-    monthOfYear[5] = "Jun";
-    monthOfYear[6] = "Jul";
-    monthOfYear[7] = "Aug";
-    monthOfYear[8] = "Sep";
-    monthOfYear[9] = "Oct";
-    monthOfYear[10] = "Nov";
-    monthOfYear[11] = "Dec";
+    let monthOfYearArr = new Array(12);
+    monthOfYearArr[0]  = "Jan";
+    monthOfYearArr[1]  = "Feb";
+    monthOfYearArr[2]  = "Mar";
+    monthOfYearArr[3]  = "Apr";
+    monthOfYearArr[4]  = "May";
+    monthOfYearArr[5]  = "Jun";
+    monthOfYearArr[6]  = "Jul";
+    monthOfYearArr[7]  = "Aug";
+    monthOfYearArr[8]  = "Sep";
+    monthOfYearArr[9]  = "Oct";
+    monthOfYearArr[10] = "Nov";
+    monthOfYearArr[11] = "Dec";
+    
+    let dayOfWeek = dayOfWeekArr[d.getDay()];
+    
+    let yyyy = d.getFullYear();
+    let mm   = (d.getMonth() + 1).toString().length == 1 ?  ("0" + (d.getMonth() + 1)) : (d.getMonth() + 1);
+    let dd   = (d.getDay() + 1).toString().length == 1 ?  ("0" + (d.getDay() + 1)) : (d.getDay() + 1);
+    
+    let month = monthOfYearArr[d.getMonth()];
+    
+    let dayOfMonth = d.getDate().toString().length == 1 ? ("0" + d.getDate()) : d.getDate();
+    
+    let HH = (d.getHours().toString().length   == 1 ? ("0" + d.getHours()  ) : d.getHours()  );
+    let MM = (d.getMinutes().toString().length == 1 ? ("0" + d.getMinutes()) : d.getMinutes());
+    let SS = (d.getSeconds().toString().length == 1 ? ("0" + d.getSeconds()) : d.getSeconds());
+    
+    let hhmmss = HH + ":" + MM + ":" + SS;
+    
+    let yyyymmdd = yyyy + "-" + mm + "-" + dd;
+    
+    let tsFull = yyyymmdd + " " + hhmmss;
+
     
     let t = {
-        dayOfWeek : dayOfWeek[d.getDay()],
+        dayOfWeek,
+        yyyy,
+        mm,
+        dd,
         
-        month : monthOfYear[d.getMonth()],
+        month,
         
-        dayOfMonth : d.getDate().toString().length == 1 ? ("0" + d.getDate()) : d.getDate(),
+        dayOfMonth,
         
-        hhmmss : (d.getHours().toString().length   == 1 ? ("0" + d.getHours()  ) : d.getHours()  ) + ":" +
-                 (d.getMinutes().toString().length == 1 ? ("0" + d.getMinutes()) : d.getMinutes()) + ":" +
-                 (d.getSeconds().toString().length == 1 ? ("0" + d.getSeconds()) : d.getSeconds()),
+        HH,
+        MM,
+        SS,
+        
+        hhmmss,
+        
+        yyyymmdd,
+        
+        tsFull,
     };
     
     return t;
 }
+
+
+export
+function Log(logStr)
+{
+    let t = GetTime();
+    
+    let stackStr = new Error().stack.toString().replace(/\n/, '').replace( /  +/g, ' ' )
+    let callerStr = stackStr.split(' ')[5];
+    
+    let logStamped = `[${callerStr}]\n${t.tsFull}: ${logStr}`;
+    
+    console.log(logStamped);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
