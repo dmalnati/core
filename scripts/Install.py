@@ -73,8 +73,6 @@ def DoDynamicSubstitution(file, cfg):
         buf = fd.read()
         fd.close()
 
-        Log("--------------")
-        Log("Checking %s" % file)
         matchList = re.findall(r"<\\?(.*?)\\?>", buf)
 
         if len(matchList):
