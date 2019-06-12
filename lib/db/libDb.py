@@ -135,7 +135,7 @@ class Database():
         
         try:
             timeStart = DateTimeNow()
-            subprocess.check_output(["sqlite3", dbFrom, ".backup %s" % dbTo])
+            subprocess.check_output(["sqlite3", dbFrom, ".timeout 10000", ".backup %s" % dbTo])
             timeEnd = DateTimeNow()
             secDiff = DateTimeStrDiffSec(timeEnd, timeStart)
             
