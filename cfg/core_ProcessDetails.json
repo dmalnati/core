@@ -12,6 +12,13 @@
     "name" : "CORE_WEBSERVER",
     "desc" : "Webserver",
     "cmd"  : "core_Webserver.py",
+    "port" : "+79"
+}
+,
+{
+    "name" : "CORE_WEBSERVER_PROXY",
+    "desc" : "Webserver Proxy",
+    "cmd"  : "nginx -c %$GC%/core_Nginx.conf",
     "port" : "+80"
 }
 
