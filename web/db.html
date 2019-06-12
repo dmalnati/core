@@ -1,16 +1,18 @@
 <html>
     <head>
         <title>DB</title>
+
+        <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
         
         <link rel="stylesheet" href="/core/css/core.css">
-    </head>
     
-    <script src="/core/js/libUtl.js"></script>
-    <script src="/core/js/libWS.js"></script>
-    <script>
-'use strict'
-    
-class Handler extends WSEventHandler
+    <script type='module'>
+
+import { Commas } from '/core/js/libUtl.js';
+import * as libWS from '/core/js/libWS.js';
+
+
+class Handler extends libWS.WSEventHandler
 {
     OnConnect(ws)
     {
@@ -55,21 +57,19 @@ class Handler extends WSEventHandler
 
 function Connect()
 {
-    let url = window.location.href;
-    let arr = url.split("/");
-    
-    let hostAndPort = arr[2];
-    
-    let addr = "ws://" + hostAndPort + "/core/ws/db";
-
-    let ws = WSManager.Connect(new Handler(), addr);
+    let ws = libWS.WSManager.Connect(new Handler(), '/core/ws/db')
 
     document.getElementById("status").innerHTML = "Attempting connection";
 }
 
+
+document.addEventListener('DOMContentLoaded', Connect);
+
     </script>
-    
-    <body onload='Connect();'>
+
+    </head>
+
+    <body>
         <div id='status'></div>
         <br/>
         <div id='target'></div>
