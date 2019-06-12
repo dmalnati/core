@@ -5,6 +5,9 @@ import re
 import os
 import sys
 
+from io import StringIO
+import contextlib
+
 
 #
 # Two modes of operation
@@ -54,7 +57,97 @@ def SetupDirectories():
 
 
 
-def DoSysDefSubstitution(file, cfg):
+@contextlib.contextmanager
+def stdoutIO(stdout=None):
+    old = sys.stdout
+    if stdout is None:
+        stdout = StringIO()
+    sys.stdout = stdout
+    yield stdout
+    sys.stdout = old
+
+
+def DoDynamicSubstitution(file, cfg):
+        # Pull the sourc file
+        fd = open(file)
+        buf = fd.read()
+        fd.close()
+
+        Log("--------------")
+        Log("Checking %s" % file)
+        matchList = re.findall(r"<\\?(.*?)\\?>", buf)
+
+        if len(matchList):
+            Log("")
+            Log("%s ->" % file)
+            Log("%s.predyn" % file)
+
+            strLen = len(buf)
+
+            bufNew = ""
+
+            # walk through file contents and look for executable sections.
+            idx = 0
+            cont = True
+            while cont:
+                # look for data leading up to first tag
+                # then get the stuff between tags
+                # repeat
+                idxTagStart = buf.find("<?", idx)
+                if idxTagStart != -1:
+                    idxTagEnd = buf.find("?>", idxTagStart)
+
+                    if idxTagEnd != -1:
+                        rawOutput = buf[idx:idxTagStart]
+                        dynCode   = buf[idxTagStart + 2:idxTagEnd]
+
+                        idx = idxTagEnd + 2
+
+                        bufNew += rawOutput
+
+                        if dynCode.find("print") == -1:
+                            try:
+                                result = str(eval(dynCode))
+                                bufNew += result
+                            except Exception as e:
+                                Log("Failed to do dynamic eval substitution for %s: %s" % (file, e))
+                                print("\"" + dynCode + "\"")
+                                sys.exit(1)
+                        else:
+                            with stdoutIO() as s:
+                                try:
+                                    exec(dynCode)
+                                    result = s.getvalue()
+                                    bufNew += result
+                                except Exception as e:
+                                    Log("Failed to do dynamic exec substitution for %s: %s" % (file, e))
+                                    sys.exit(1)
+
+                    else:
+                        # that's not good -- author missed the close tag somehow
+                        cont = False
+                else:
+                    cont = False
+
+
+                if idx >= strLen:
+                    cont = False
+
+            if idx != strLen:
+                bufNew += buf[idx:]
+
+
+            if buf != bufNew:
+                SafeCopyFileIfExists(file, file + ".predyn")
+                fd = open(file, "w")
+                fd.write(bufNew)
+                fd.close()
+
+
+
+
+
+def DoSysDefEnvironSubstitution(file, cfg):
     try:
         fdIn = open(file, "r")
         buf = fdIn.read()
@@ -67,18 +160,20 @@ def DoSysDefSubstitution(file, cfg):
 
             Log("")
             Log("%s ->" % file)
-            Log("%s.presysdef" % file)
-            didMatch = False
+            Log("%s.presub" % file)
             for match in matchList:
                 if match in cfg:
-                    didMatch = True
                     val = cfg[match]
+                    buf = buf.replace("%%%s%%" % (match), val)
+                    Log("  %%%s%% -> \"%s\"" % (match, val))
+                elif match[0] == "$" and match[1:] in os.environ:
+                    val = os.environ[match[1:]]
                     buf = buf.replace("%%%s%%" % (match), val)
                     Log("  %%%s%% -> \"%s\"" % (match, val))
                 else:
                     Log("  %%%s%% -> [NO VALUE FOUND]" % match)
 
-            SafeCopyFileIfExists(file, file + ".presysdef")
+            SafeCopyFileIfExists(file, file + ".presub")
             fd = open(file, "w")
             fd.write(buf)
             fd.close()
@@ -90,7 +185,7 @@ def DoSysDefSubstitution(file, cfg):
 
 
 
-def ApplySysDefSubstitution(tmpDir):
+def ApplySysDefEnvironSubstitution(tmpDir):
     srcFile = tmpDir + "/SystemDefinition.master.json"
     cfg     = ConfigReader().ReadConfigOrAbort(srcFile)
 
@@ -103,7 +198,8 @@ def ApplySysDefSubstitution(tmpDir):
         filePartList = file.split("_")
 
         if filePartList[-1] not in fileListSuffixNoSub:
-            DoSysDefSubstitution(file, cfg)
+            DoSysDefEnvironSubstitution(file, cfg)
+            DoDynamicSubstitution(file, cfg)
 
 
 
@@ -389,8 +485,8 @@ def GenerateConfig():
                        "SystemDefinition.master.json")
     Log("")
 
-    Log("Applying SysDef substitutions")
-    ApplySysDefSubstitution(tmpDir)
+    Log("Applying SysDef/Environ/Dyn substitutions")
+    ApplySysDefEnvironSubstitution(tmpDir)
     Log("")
 
     Log("Generating ProcessDetials.master.json")
