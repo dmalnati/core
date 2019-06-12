@@ -51,17 +51,20 @@ def evm_MainLoop():
     # this leads to applications dying and never quitting, hiding the issue.
     # here I intercept those logging calls and do the quitting myself
     tornadoAppLogError = tornado.log.app_log.error
-    def MyAppLogError(one, two, **kwargs):
-        tornadoAppLogError(one, two, **kwargs)
-        Log("Intercepted uncaught exception, exiting")
-        sys.exit(1)
+    def MyAppLogError(*args, **kwargs):
+        tornadoAppLogError(*args, **kwargs)
+
+        if args[0].find("Exception") != -1:
+            Log("Intercepted uncaught exception, exiting")
+            sys.exit(1)
     tornado.log.app_log.error = MyAppLogError
 
     tornadoGenLogError = tornado.log.gen_log.error
-    def MyGenLogError(one, two, **kwargs):
-        tornadoAppLogError(one, two, **kwargs)
-        Log("Intercepted uncaught exception, exiting")
-        sys.exit(1)
+    def MyGenLogError(*args, **kwargs):
+        tornadoAppLogError(*args, **kwargs)
+        if args[0].find("Exception") != -1:
+            Log("Intercepted uncaught exception, exiting")
+            sys.exit(1)
     tornado.log.gen_log.error = MyGenLogError
 
     # start handling events
