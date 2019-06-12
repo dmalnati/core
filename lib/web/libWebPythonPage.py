@@ -60,7 +60,11 @@ class PythonPageFileHandler(WebRequestHandler):
                     # hmm, dropped context, couldn't access trivial things like
                     # the Commas function.
                     # Be safe in there.
-                    exec(dynOutput)
+                    try:
+                        exec(dynOutput)
+                    except Exception as e:
+                        Log("Dynamic page %s could not be executed: %s" % (fileToGet, e))
+                        cont = False
                     
                 else:
                     # that's not good -- author missed the close tag somehow
