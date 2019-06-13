@@ -54,6 +54,20 @@ def GetFileSize(file):
     
     return size
 
+def GetFileContents(file):
+    retVal = None
+
+    if FileExists(file):
+        try:
+            fdIn = open(file, "r")
+            retVal = fdIn.read()
+            fdIn.close()
+        except:
+            retVal = None
+
+    return retVal
+
+
 def SafeCopyFileIfExists(srcFile, dstFile):
     retVal = True
 

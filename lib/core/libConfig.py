@@ -94,6 +94,7 @@ class ConfigReader():
             try:
                 with open(cfgFile, 'r') as file:
                     fileData = file.read().rstrip('\n')
+                    fileData = self.StripComments(fileData)
             except:
                 pass
 
@@ -114,6 +115,19 @@ class ConfigReader():
         self.cfg = jsonObj
 
         return self.cfg
+
+    def StripComments(self, fileData):
+        retVal = ""
+
+        for line in fileData.split("\n"):
+            lineStripped = line.strip()
+            if len(lineStripped) >= 1:
+                if lineStripped[0] == "#":
+                    pass
+                else:
+                    retVal += line + "\n"
+
+        return retVal
 
     def CfgToStr(self, cfg):
        return json.dumps(cfg,

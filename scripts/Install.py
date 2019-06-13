@@ -73,9 +73,7 @@ def DoDynamicSubstitution(file, cfg):
         buf = fd.read()
         fd.close()
 
-        matchList = re.findall(r"<\\?(.*?)\\?>", buf)
-
-        if len(matchList):
+        if buf.find("<?") != -1:
             Log("")
             Log("%s ->" % file)
             Log("%s.predyn" % file)
@@ -119,6 +117,7 @@ def DoDynamicSubstitution(file, cfg):
                                     bufNew += result
                                 except Exception as e:
                                     Log("Failed to do dynamic exec substitution for %s: %s" % (file, e))
+                                    Log(dynCode)
                                     sys.exit(1)
 
                     else:
@@ -192,7 +191,7 @@ def ApplySysDefEnvironSubstitution(tmpDir):
         "SystemDefinition.master.json"
     ]
 
-    for file in Glob(tmpDir + "/*"):
+    for file in sorted(Glob(tmpDir + "/*")):
         filePartList = file.split("_")
 
         if filePartList[-1] not in fileListSuffixNoSub:
@@ -360,7 +359,6 @@ def MergeDct(directory, fileSuffix, fileOut):
 # expected output format:
 # <service> <host> <port> <wsPath>
 def GenerateWSServices(directory):
-    SysDef.SetDir(directory)
     basePort = int(SysDef.Get("CORE_BASE_PORT"))
 
     cfgReader = ConfigReader()
@@ -475,6 +473,9 @@ def GenerateConfig():
         retVal &= CopyFiles(productCfgDir, tmpDir, verbose=True)
 
     retVal &= CopyFiles(core + "/site-specific/cfg", tmpDir, verbose=True)
+
+    # Cause SysDef accessor working off of generated copy
+    SysDef.SetDir(tmpDir)
 
     # Do file generation
     Log("Generating SystemDefinition.master.json")
