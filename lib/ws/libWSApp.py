@@ -75,8 +75,6 @@ class WSApp(WSManager):
         self.AffirmServiceDataWithPort(portActual)
 
         # Useful stamp at start of applications
-        Log("PID: %s" % os.getpid())
-
         service = self.serviceData["service"]
         addr    = self.serviceData["addr"]
         Log("[%s :: %s]" % (service, addr))

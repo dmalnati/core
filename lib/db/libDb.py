@@ -76,39 +76,6 @@ class Database():
     
     
     @staticmethod
-    def DoVacuum(dbFile):
-        retVal = True
-        
-        Log("Vacuuming %s" % (dbFile))
-        
-        try:
-            con = sqlite3.connect(dbFile)
-        
-            timeStart = DateTimeNow()
-            
-            fileSizeBefore = GetFileSize(dbFile)
-            con.execute("pragma temp_store_directory=\"%s\"" % CorePath("/runtime/db"))
-            con.execute("vacuum")
-            fileSizeAfter = GetFileSize(dbFile)
-            
-            timeEnd = DateTimeNow()
-            secDiff = DateTimeStrDiffSec(timeEnd, timeStart)
-            
-            con.close()
-            
-            Log("Vacuum complete, took %s sec" % secDiff)
-            Log("Size before : %11s" % Commas(fileSizeBefore))
-            Log("Size after  : %11s" % Commas(fileSizeAfter))
-            Log("Size reduced: %11s" % Commas(fileSizeBefore - fileSizeAfter))
-            Log("")
-        except Exception as e:
-            Log("Vacuum failed: %s" % e)
-            retVal = False
-            
-        return retVal
-            
-    
-    @staticmethod
     def DoRunningBackup():
         backupWorked = Database.DoBackup(Database.GetDatabaseRunningFullPath(),
                                          Database.GetDatabaseBackupFullPath())

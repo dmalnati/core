@@ -14,7 +14,7 @@ def ActuallyKilled(service):
     cont = True
     secRemaining = 5
     while cont:
-        time.sleep(0.5)
+        time.sleep(0.1)
         running = RunInfo.ServiceIsRunning(service)
 
         if not running:
@@ -30,36 +30,29 @@ def ActuallyKilled(service):
     return retVal
 
 
-def GetWSKillType(service):
+
+def GetKillTechniqueList(service):
     proc = ProcessDetails().Get(service)
 
-    killCmd = "KILL"
+    killTechniqueList = ["KILL", "SIGNAL"]
+
     if "kill" in proc:
-        killCmd = proc["kill"]
+        killTechniqueList = proc["kill"]
 
-    return killCmd
+    return killTechniqueList
 
-def OkToKill(service):
-    retVal = True
 
-    killCmd = GetWSKillType(service)
 
-    # handle special "SHUTDOWN" command, means don't kill ever
-    if killCmd == "SHUTDOWN":
-        retVal = False
-
-    return retVal
-
-def WSKill(service):
-    killCmd = GetWSKillType(service)
-
+def WSKill(service, killCmd):
     try:
-        subprocess.check_output(("WSReq.py %s %s " % (service, killCmd)).split())
+        subprocess.check_output(("WSReq.py %s %s" % (service, killCmd)).split())
     except:
         pass
 
-def Kill(pid):
+
+def SigKill(pid):
     subprocess.check_call(("kill " + str(pid)).split())
+
 
 
 def Main():
@@ -74,32 +67,39 @@ def Main():
     if RunInfo.ServiceExists(service):
         if RunInfo.ServiceIsRunning(service):
             Log("Killing %s" % service)
-            try:
-                pid = RunInfo.GetServicePid(service)
 
-                WSKill(service)
+            killTechniqueList = GetKillTechniqueList(service)
 
-                if ActuallyKilled(service):
-                    Log("Service %s killed" % service)
-                    retVal = True
-                else:
-                    Log("Service %s was not killed via WS" % service)
-                    if OkToKill(service):
-                        Log("Resorting to actual kill command")
+            if len(killTechniqueList):
+                for killTechnique in killTechniqueList:
+                    killAttempted = True
 
-                        Kill(pid)
+                    if killTechnique == "SHUTDOWN" or killTechnique == "KILL":
+                        Log("  Attempting %s" % killTechnique)
 
+                        WSKill(service, killTechnique)
+                    elif killTechnique == "SIGNAL":
+                        Log("  Attempting %s" % killTechnique)
+
+                        pid = RunInfo.GetServicePid(service)
+                        SigKill(pid)
+                    else:
+                        Log("  Kill mode %s not valid, skipping" % killTechnique)
+                        killAttempted = False
+
+                    if killAttempted:
                         if ActuallyKilled(service):
                             Log("Service %s killed" % service)
                             retVal = True
+                            break
                         else:
-                            Log("Service %s was not killed after term" %
-                                  service)
-                    else:
-                        Log("Service %s ineligible for kill command, quitting" %
-                            service)
-            except Exception as e:
-                Log("Service %s could not be killed: %s" % (service, e))
+                            Log("  Service %s was not killed by %s" % (service, killTechnique))
+
+                if retVal != True:
+                    Log("Service %s not killed, all attempts failed" % service)
+            else:
+                Log("Service %s configured to not be killed" % service)
+                retVal = True
         else:
             Log("Service %s not running" % service)
     else:

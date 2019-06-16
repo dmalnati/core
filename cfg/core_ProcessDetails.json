@@ -5,7 +5,7 @@
     "name" : "CORE_DATABASE_MANAGER",
     "desc" : "Database Manager",
     "cmd"  : "core_DatabaseManager.py",
-    "kill" : "SHUTDOWN"
+    "kill" : ["SHUTDOWN"]
 }
 ,
 {
@@ -19,7 +19,8 @@
     "name" : "CORE_WEBSERVER_PROXY",
     "desc" : "Webserver Proxy",
     "cmd"  : "nginx -c %$GC%/core_Nginx.conf",
-    "port" : "+80"
+    "port" : "+80",
+    "kill" : ["SIGNAL"]
 }
 
 

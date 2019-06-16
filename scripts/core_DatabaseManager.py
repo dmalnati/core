@@ -109,9 +109,6 @@ class App(WSApp, WSEventHandler):
         
         
     def OnDoBackup(self):
-        Log("Vacuuming database")
-        Database.DoVacuum(Database.GetDatabaseRunningFullPath())
-        
         Log("Backing up database")
         Database.DoRunningBackup()
         
@@ -122,6 +119,7 @@ class App(WSApp, WSEventHandler):
         
         if self.dbState == "DATABASE_AVAILABLE":
             Log("Scheduling next database backup for %s minutes" % int(self.backupIntervalMin))
+            Log("")
             evm_SetTimeout(OnTimeout, int(self.backupIntervalMin * 60 * 1000))
         
     def OnDoDatabaseCapacityCheck(self):
