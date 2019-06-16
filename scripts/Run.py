@@ -27,7 +27,6 @@ def ActuallyRun(service, cmd):
     # Print command being executed into the log file
     Log("Starting %s" % service, fdOut)
     Log(cmd, fdOut)
-    Log("", fdOut)
     fdOut.flush()
 
     # make sure parent takes out child when it goes
@@ -47,8 +46,20 @@ def ActuallyRun(service, cmd):
                             stderr=subprocess.STDOUT,
                             preexec_fn = set_pdeathsig(signal.SIGTERM))
 
+    # Indicate child PID
+    Log("PID: %s" % proc.pid, fdOut)
+    Log("", fdOut)
+    fdOut.flush()
+
     # Cause parent to wait around so it can be seen in process list
     proc.wait()
+
+    # Capture return code and log it
+    returnCode = proc.returncode
+
+    Log("", fdOut)
+    Log("Process exited with %s" % returnCode, fdOut)
+    fdOut.flush()
 
 
 def ForkDaemon(service, cmd):
