@@ -1,3 +1,4 @@
+import subprocess
 import sys
 import time
 import datetime
@@ -11,6 +12,14 @@ import json
 # Utility
 #
 #######################################################################
+
+
+def RunCommand(cmd):
+    proc = subprocess.Popen(cmd.split())
+    proc.wait()
+    returnCode = proc.returncode
+
+    return returnCode
 
 
 def DateNow():

@@ -18,44 +18,22 @@
 
 if [ ! -z "$CORE" ]
 then
-    # get list of product directories, reversed.
-    # we're going to peel off front-to-back, so we want the
-    # core product to end up last so it's the most preferred in the various
-    # lists of paths we're creating
-    productDirList=$($CORE/core/scripts/Install.py -getProductDirListReversed)
+    # Pull in environment varibles
 
+    # declare that any variables we encounter are to be exported
+    set -o allexport
 
-    # setup PATH to include each scripts dir of each product
-    for dir in $productDirList
-    do
-        scriptDir="$dir/scripts"
-        [[ ":$PATH:" =~ ":$scriptDir:" ]] || PATH="$scriptDir:$PATH"
-        testDir="$dir/test"
-        [[ ":$PATH:" =~ ":$testDir:" ]] || PATH="$testDir:$PATH"
-    done
-    export PATH
+    envmapName="$CORE/runtime/working/core_envmap.env"
+    if [ ! -f "$envmapName" ]
+    then
+        $("$CORE/core/scripts/Install.py" -createEnvironmentMap)
+    fi
 
+    # source the NAME=VALUE environment variables
+     . "$envmapName"
 
-    # setup python library paths
-    for dir in $productDirList
-    do
-        for libDir in $(find "$dir/lib" -type d 2>/dev/null)
-        do
-            [[ ":$PYTHONPATH:" =~ ":$libDir:" ]] || PYTHONPATH="$libDir:$PYTHONPATH"
-        done
-    done
-    export PYTHONPATH
-
-
-    # setup config search paths
-    # define in reverse priority order so the variable is sorted in
-    # priority order
-    configDirList="$CORE/generated-cfg $CORE/site-specific/cfg"
-    for dir in $configDirList
-    do
-        [[ ":$CORE_CFG_PATH:" =~ ":$dir:" ]] || CORE_CFG_PATH="$dir:$CORE_CFG_PATH"
-    done
-    export CORE_CFG_PATH
+    # no longer auto export
+    set +o allexport
 
 
     # set up convenience variables

@@ -1,6 +1,7 @@
 #!/usr/bin/python -u
 
 
+import getpass
 import re
 import os
 import sys
@@ -27,7 +28,17 @@ libCoreProduct = SourceFileLoader("module.name", os.environ["CORE"] + "/core/lib
 
     
     
-    
+def CreateEnvironmentMap():
+    envmapName = libCoreProduct.CorePath('/runtime/working/core_envmap.env')
+
+    envMap = libCoreProduct.GetEnvironmentMap()
+
+    fd = open(envmapName, 'w')
+    for key in envMap:
+        print('%s="%s"' % (key, envMap[key]), file=fd)
+    fd.close()
+
+
     
     
 def SetupDirectories():
@@ -447,6 +458,55 @@ def GenerateWSServices(directory):
         Log("Couldn't generate WSServices: %s" % e)
 
 
+# https://www.brendanlong.com/systemd-user-services-are-amazing.html
+def InstallService():
+    service             = "core_systemd.service"
+    user                = getpass.getuser()
+    dirSystemd          = GetHomeDirectory() + "/.config/systemd/user"
+    serviceFileFullPath = dirSystemd + '/' + service
+
+    SafeMakeDir(dirSystemd)
+    SafeRemoveFileIfExists(serviceFileFullPath)
+
+    os.symlink(CorePath('/generated-cfg/core_systemd.service'), serviceFileFullPath)
+
+    ok = True
+
+    # this enables the user service described in the service file
+    if ok:
+        try:
+            RunCommand("systemctl --user enable %s" % service)
+        except Exception as e:
+            ok = False
+            Log("Could not enable service: %s" % e)
+
+    # this enables bootup running of the service despite the user not being logged in
+    if ok:
+        try:
+            RunCommand("sudo loginctl enable-linger %s" % user)
+        except Exception as e:
+            ok = False
+            Log("Could not enable boot start for user %s: %s" % (user, e))
+
+    # this is necessary after each change of the service file, which will happen
+    # each time Install is run, as the prior file is overwritten.
+    # necessary even if exactly the same file contents.
+    if ok:
+        try:
+            RunCommand("systemctl --user daemon-reload")
+        except Exception as e:
+            ok = False
+            Log("Could not reload user daemon: %s" % e)
+
+    # now you can start the user service by hand by doing this
+    # (though it will happen automatically on boot)
+    #
+    # systemctl --user start core_systemd.service
+    #
+    # To see the output, run:
+    # sudo journalctl
+    #
+
 
 def GenerateConfig():
     retVal = True
@@ -458,6 +518,11 @@ def GenerateConfig():
 
     productDirList = libCoreProduct.GetProductDirectoryListReversed()
     copyFromToList = []
+
+    # Create environment map
+    Log("Creating environment map")
+    CreateEnvironmentMap()
+    Log("")
 
     # make temporary directory after removing old if it exists
     tmpDir = core + "/generated-cfg/tmp"
@@ -509,10 +574,14 @@ def GenerateConfig():
         gcDir = core + "/generated-cfg"
 
         Log("Assembly succssful, moving to %s" % gcDir)
-
         DeleteFilesInDir(gcDir)
         CopyFiles(tmpDir, gcDir)
         RemoveDir(tmpDir)
+        Log("")
+
+        Log("Enabling systemd service")
+        InstallService()
+        Log("")
     else:
         Log("Failed to generate config properly")
 
@@ -534,8 +603,8 @@ def Main():
         sys.exit(-1)
 
     if "CORE" in os.environ:
-        if len(sys.argv) == 2 and sys.argv[1] == "-getProductDirListReversed":
-            print(" ".join(libCoreProduct.GetProductDirectoryListReversed()))
+        if len(sys.argv) == 2 and sys.argv[1] == "-createEnvironmentMap":
+            CreateEnvironmentMap()
         else:
             forceFlag = False
             if len(sys.argv) == 2 and sys.argv[1] == "--force":

@@ -2,7 +2,7 @@ import time
 import os
 
 from libUtl import *
-from libCoreDir import *
+from libCoreProduct import *
 from libFilesystem import *
 from libLock import *
 

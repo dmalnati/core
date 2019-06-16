@@ -1,5 +1,6 @@
 #!/usr/bin/python -u
 
+import datetime
 import sys
 import os
 
@@ -29,33 +30,51 @@ class App(WSApp, WSEventHandler):
             # check if offline database exists, should thanks to Remap, or abort
             dbOffline = Database.GetDatabaseClosedFullPath()
             Log("Checking offline db exists: %s" % dbOffline)
-            Log("")
             if not FileExists(dbOffline):
                 Log("ERR: Offline db file does not exist: %s" % dbOffline)
-                Log("")
                 ok = False
+            else:
+                Log("Offline db OK")
+            Log("")
 
         if ok:
             # move it to ram
             dbOnline = Database.GetDatabaseRunningFullPath()
-            Log("Moving offline db to online runtime: %s" % dbOnline)
-            Log("")
+            Log("Preparing to bring database online")
             SafeMakeDir(DirectoryPart(dbOnline))
 
             if FileExists(dbOnline):
-                Log("ERR: Online database already exists")
-                Log("")
-                ok = False
+                Log("ERR: Online database already exists, not a clean shutdown")
+
+                backupFile = dbOffline + '.backup.' + datetime.datetime.now().strftime("%Y_%m_%d__%H_%M_%S")
+
+                Log("Moving existing online to backup %s and starting from last good" % backupFile)
+
+                if SafeMoveFileIfExists(dbOnline, backupFile):
+                    Log("Backup succeeded")
+                else:
+                    Log("ERR: Backup failed, pressing on anyway")
+                    SafeRemoveFileIfExists(dbOnline)
+            else:
+                Log("Prepare OK")
+            Log("")
 
         if ok:
+            Log("Copying offline db to online runtime: %s" % dbOnline)
             if not SafeCopyFileIfExists(dbOffline, dbOnline):
                 Log("ERR: Unable to put database online")
-                Log("")
                 ok = False
+            else:
+                Log("Copy OK")
+            Log("")
 
         if ok:
             self.db = Database()
+            Log("Opening database")
             if self.db.Connect(forcedDbFullPath=Database.GetDatabaseRunningFullPath()):
+                Log("Open OK")
+                Log("")
+
                 self.dbState = "DATABASE_AVAILABLE"
                 
                 self.ScheduleNextBackup()
@@ -65,7 +84,7 @@ class App(WSApp, WSEventHandler):
                 Log("Running")
                 Log("")
             else:
-                Log("Could not open database, shutting down")
+                Log("ERR: Could not open database, shutting down")
                 self.OnDoDatabaseClose()
             
             evm_MainLoop()

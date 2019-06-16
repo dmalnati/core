@@ -17,6 +17,7 @@ def Mon():
     state         = ServerState().GetState()
     stateDuration = ServerState().GetDurationOfCurrentStateFormatted()
 
+    dbBackupList = Glob(CorePath('/runtime/db/*.backup.*'))
 
     capacityCheckThresholdPct = int(SysDef().Get("CORE_DATABASE_CAPACITY_CHECK_THRESHOLD_PCT"))
     pct = GetDiskUsagePct(Database.GetDatabaseRunningFullPath())
@@ -31,6 +32,13 @@ def Mon():
     
     print("State: %s (for %s)" % (state, stateDuration))
     print("DB: %s / %s%%" %(pctStr, capacityCheckThresholdPct))
+
+    if len(dbBackupList):
+        print("")
+        print("WARN: %s DB backup files present" % str(len(dbBackupList)))
+        for dbBackup in dbBackupList:
+            print("    %s" % dbBackup)
+
     print("")
 
     print("%6s %6s %6s    %-25s %-s" % ("pid", "cpu", "mem", "service", "desc"))

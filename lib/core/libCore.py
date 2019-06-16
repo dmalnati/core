@@ -1,7 +1,8 @@
+from libCoreProduct import *
+MoveToCoreRuntimeDir()
+ApplyEnvironmentMapToThisProcess()
 from libUtl import *
 from libTimeAndTimeZone import *
-from libCoreDir import *
-from libCoreProduct import *
 from libFilesystem import *
 from libConfig import *
 from libSysDef import *

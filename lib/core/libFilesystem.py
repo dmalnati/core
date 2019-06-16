@@ -11,8 +11,11 @@ from shutil import copyfile, move
 from libUtl import *
 
 
+def GetHomeDirectory():
+    return os.path.expanduser("~")
+
 def Glob(pattern):
-    retVal = glob.glob(pattern)
+    retVal = sorted(glob.glob(pattern))
 
     return retVal
 
