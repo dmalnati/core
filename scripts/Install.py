@@ -32,7 +32,7 @@ libCoreProduct = SourceFileLoader("module.name", os.environ["CORE"] + "/core/lib
     
 
 def CanSudo():
-    result = subprocess.Popen("sudo -v".split(),
+    result = subprocess.Popen("sudo -n ls".split(),
                               stdout=subprocess.DEVNULL,
                               stderr=subprocess.DEVNULL)
     result.wait()
