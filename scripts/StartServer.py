@@ -8,12 +8,15 @@ import time
 from libCore import *
 
 
-def RunRemap():
+def RunRemap(forceFlag = False):
     retVal = True
 
     Log("Running Remap.py")
     try:
-        subprocess.check_call(("Remap.py").split())
+        if forceFlag:
+            subprocess.check_call(("Remap.py --force").split())
+        else:
+            subprocess.check_call(("Remap.py").split())
     except Exception as e:
         retVal = False
 
@@ -23,9 +26,13 @@ def RunRemap():
 def Main():
     retVal = False
 
-    if len(sys.argv) < 1 or (len(sys.argv) >= 2 and sys.argv[1] == "--help"):
+    if len(sys.argv) > 2 or (len(sys.argv) >= 2 and sys.argv[1] == "--help"):
         print("Usage: %s" %  os.path.basename(sys.argv[0]))
         sys.exit(-1)
+
+    forceFlag = False
+    if len(sys.argv) == 2 and sys.argv[1] == "--force":
+        forceFlag = True
 
     service__serviceDetail = RunInfo.GetServiceMap()
 
@@ -36,8 +43,17 @@ def Main():
     if ss.GetStateLock():
         state = ss.GetState()
 
-        if state == "CLOSED":
-            if RunRemap():
+        movePastState = True
+        if not state == "CLOSED":
+            movePastState = False
+
+            if forceFlag:
+                movePastState = True
+                Log("Force starting despite state %s "
+                    "not being CLOSED" % state)
+
+        if movePastState:
+            if RunRemap(forceFlag):
                 ss.SetState("STARTING")
 
                 Log("Starting all services")

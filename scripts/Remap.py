@@ -7,7 +7,8 @@ from libCore import *
 
 
 class App():
-    def __init__(self):
+    def __init__(self, forceFlag):
+        self.forceFlag = forceFlag
         self.dbOffline = Database.GetDatabaseClosedFullPath()
         dbOfflineDir   = DirectoryPart(self.dbOffline)
 
@@ -91,7 +92,16 @@ class App():
         ss = ServerState()
         state = ss.GetState()
 
-        if state == "CLOSED":
+        movePastState = True
+        if not state == "CLOSED":
+            movePastState = False
+
+            if self.forceFlag:
+                movePastState = True
+                Log("Force remap despite state %s "
+                    "not being CLOSED" % state)
+
+        if movePastState:
             if self.OfflineDbConsistent():
                 Log("Offline database consistent")
 
@@ -120,11 +130,15 @@ class App():
 
 
 def Main():
-    if len(sys.argv) < 1 or (len(sys.argv) >= 2 and sys.argv[1] == "--help"):
+    if len(sys.argv) > 2 or (len(sys.argv) >= 2 and sys.argv[1] == "--help"):
         print("Usage: %s" % os.path.basename(sys.argv[0]))
         sys.exit(-1)
 
-    retVal = App().Run()
+    forceFlag = False
+    if len(sys.argv) == 2 and sys.argv[1] == "--force":
+        forceFlag = True
+
+    retVal = App(forceFlag).Run()
 
     return retVal == False
 
