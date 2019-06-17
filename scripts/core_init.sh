@@ -26,7 +26,7 @@ then
     envmapName="$CORE/runtime/working/core_envmap.env"
     if [ ! -f "$envmapName" ]
     then
-        $("$CORE/core/scripts/Install.py" -createEnvironmentMap)
+        tmp=$("$CORE/core/scripts/Install.py" -createEnvironmentMap)
     fi
 
     # source the NAME=VALUE environment variables

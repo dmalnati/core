@@ -22,7 +22,6 @@ try:
     from libCore import *
     libCoreLoaded = True
 except Exception as e:
-    print("libCore not loaded: %s" % e)
     libCoreLoaded = False
     
 
