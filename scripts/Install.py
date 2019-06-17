@@ -29,7 +29,11 @@ libCoreProduct = SourceFileLoader("module.name", os.environ["CORE"] + "/core/lib
     
     
 def CreateEnvironmentMap():
-    envmapName = libCoreProduct.CorePath('/runtime/working/core_envmap.env')
+    envmapDir = libCoreProduct.CorePath('/runtime/working/')
+    envmapName = envmapDir + '/core_envmap.env'
+
+    if not os.path.exists(envmapDir):
+        os.makedirs(envmapDir)
 
     envMap = libCoreProduct.GetEnvironmentMap()
 
