@@ -4,6 +4,7 @@
 import getpass
 import re
 import os
+import subprocess
 import sys
 
 from io import StringIO
@@ -19,14 +20,26 @@ import contextlib
 #
 try:
     from libCore import *
-except:
-    pass
+    libCoreLoaded = True
+except Exception as e:
+    print("libCore not loaded: %s" % e)
+    libCoreLoaded = False
+    
 
 # this is for when bootstrapping, manually import specific library
 from importlib.machinery import SourceFileLoader
 libCoreProduct = SourceFileLoader("module.name", os.environ["CORE"] + "/core/lib/core/libCoreProduct.py").load_module()
 
     
+
+def CanSudo():
+    result = subprocess.Popen("sudo -v".split(),
+                              stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL)
+    result.wait()
+
+    return result.returncode == 0
+
     
 def CreateEnvironmentMap():
     envmapDir = libCoreProduct.CorePath('/runtime/working/')
@@ -610,6 +623,26 @@ def Main():
         if len(sys.argv) == 2 and sys.argv[1] == "-createEnvironmentMap":
             CreateEnvironmentMap()
         else:
+            if libCoreLoaded == False:
+                print("ERR: libCore not loaded")
+                print("Please install missing libraries")
+                print("- tornado")
+                print("- pytz")
+                sys.exit(1)
+
+            if CanSudo() == False:
+                print("ERR: user %s not able to sudo, but needs to" % getpass.getuser())
+                print("Have a privileged user run the following:")
+                print("")
+                print("sudo sh -c ", end='')
+                print("'echo \"%s ALL=(ALL) NOPASSWD: ALL\" " %
+                      getpass.getuser(), end='')
+                print("> /etc/sudoers.d/%s_nopasswd'" % getpass.getuser())
+                print("")
+
+                sys.exit(1)
+
+
             forceFlag = False
             if len(sys.argv) == 2 and sys.argv[1] == "--force":
                 forceFlag = True
