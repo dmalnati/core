@@ -5,7 +5,7 @@ AssertPathExists=%$CORE%
 WorkingDirectory=%$CORE%
 Environment=CORE=%$CORE%
 Environment=PYTHONPATH=%$CORE%/core/lib/core
-ExecStart=%$CORE%/core/scripts/StartServer.py --force
+ExecStart=%$CORE%/core/scripts/RestartServer.py --force
 Restart=no
 KillMode=process
 NoNewPrivileges=true

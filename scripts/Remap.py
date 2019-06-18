@@ -114,7 +114,7 @@ class App():
                 Log("Opening database")
                 self.db = Database()
 
-                if self.db.Connect(createOnInit = True, verbose = True):
+                if self.db.Connect(createOnInit = True, verbose = True, forcedDbFullPath=Database.GetDatabaseClosedFullPath()):
                     Log("Database ok")
                 else:
                     Log("Database NOT ok")

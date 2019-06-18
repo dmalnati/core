@@ -127,20 +127,21 @@ class Database():
         if forcedDbFullPath:
             dbFullPath = forcedDbFullPath
         else:
-            if state == "CLOSED":
-                if FileExists(Database.GetDatabaseRunningFullPath()):
-                    Log("Server CLOSED, but online database exists, selecting online database")
+            if FileExists(Database.GetDatabaseRunningFullPath()):
+                if state == "STARTED":
                     dbFullPath = Database.GetDatabaseRunningFullPath()
                 else:
-                    Log("Server CLOSED, selecting offline database")
+                    Log("Connection failed: Online DB exists but state not STARTED")
+                    retVal = False
+            elif FileExists(Database.GetDatabaseClosedFullPath()):
+                if state == "CLOSED":
                     dbFullPath = Database.GetDatabaseClosedFullPath()
-            elif state == "STARTED":
-                Log("Server STARTED, selecting online database")
-                dbFullPath = Database.GetDatabaseRunningFullPath()
+                else:
+                    Log("Connection failed: Offline DB exists but state not CLOSED")
+                    retVal = False
             else:
-                Log("Server not CLOSED or STARTED, connection failed")
+                Log("Connection failed: No Online/Offline DB instances found")
                 retVal = False
-
         if retVal:
             Log("Connecting to database %s" % dbFullPath)
             self.conn             = sqlite3.connect(dbFullPath)
