@@ -619,6 +619,28 @@ class Record():
 
         return retVal
     
+        
+    def ReadPrevInLinearScan(self):
+        rowId = self.GetRowId()
+
+        if self.GetRowId() == -1:
+            rowId = self.table.GetHighestRowId() + 1
+
+        query = """
+                SELECT    ID as rowid, datetime(TIMESTAMP, 'localtime') AS TIMESTAMP, *
+                FROM      %s
+                WHERE     rowid < %s
+                ORDER BY  rowid DESC
+                LIMIT     1
+                """ % (self.table.tableName, rowId)
+    
+        retVal, rowList = self.table.db.Query(query)
+        
+        if retVal:
+            self.Overwrite(rowList[0])
+
+        return retVal
+    
     
     def Delete(self):
         query = """
