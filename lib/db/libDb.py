@@ -410,13 +410,14 @@ class Table():
         
         return retVal
     
-    def DeleteOlderThan(self, sec):
+    def DeleteOlderThanInternal(self, sec):
         countBefore = self.Count()
         
         query = """
                 DELETE
                 FROM    %s
                 WHERE   TIMESTAMP <= datetime('now', '-%s seconds')
+                LIMIT   1000
                 """ % (self.tableName, sec)
     
         retVal = self.db.QueryCommit(query)
@@ -425,6 +426,18 @@ class Table():
         
         retVal = countBefore - countAfter
         
+        return retVal
+
+    def DeleteOlderThan(self, sec):
+        retVal = 0
+
+        count = self.DeleteOlderThanInternal(sec)
+        retVal += count
+        
+        while count:
+            count = self.DeleteOlderThanInternal(sec)
+            retVal += count
+
         return retVal
         
     def Distinct(self, field):
