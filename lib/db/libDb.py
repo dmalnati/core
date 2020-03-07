@@ -618,7 +618,22 @@ class Record():
         
         return retVal
 
+    def ReadGTEInTimeSeries(self):
+        query = """
+                SELECT    ID as rowid, datetime(TIMESTAMP, 'localtime') AS TIMESTAMP, *
+                FROM      %s
+                WHERE     TIMESTAMP >= '%s'
+                ORDER BY  rowid ASC
+                LIMIT     1
+                """ % (self.table.tableName, self.Get("TIMESTAMP"))
+    
+        retVal, rowList = self.table.db.Query(query)
         
+        if retVal:
+            self.Overwrite(rowList[0])
+
+        return retVal
+
     def ReadNextInLinearScan(self):
         query = """
                 SELECT    ID as rowid, datetime(TIMESTAMP, 'localtime') AS TIMESTAMP, *

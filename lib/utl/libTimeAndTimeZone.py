@@ -44,6 +44,7 @@ class TimeAndTimeZone():
         self.timeNative = None
         self.formatStr  = formatStr
         
+        #self.timeNative = datetime.datetime.strptime(self.timeStr, self.formatStr)
         self.timeNative = datetime.datetime.strptime(self.timeStr, self.formatStr)
         self.timeNative = pytz.timezone(timeZoneStr).localize(self.timeNative)
         
@@ -53,9 +54,34 @@ class TimeAndTimeZone():
     def GetTimeNativeInTimeZone(self, timeZoneStr):
         return self.timeNative.astimezone(pytz.timezone(timeZoneStr))
 
-        
-        
-        
+    def GetValidTimeString(self, str):
+        # I want "YYYY-MM-DD HH:MM:SS"
+
+        strTemplate = "0000-01-01 00:00:00"
+        strTemplateLen = len(strTemplate)
+
+        strAdjusted = str
+        strAdjustedLen = len(str)
+
+        # ensure equal number of characters
+        if strAdjustedLen > strTemplateLen:
+            # truncate
+            strAdjusted = strAdjusted[:strTemplateLen]
+        elif strAdjustedLen < strTemplateLen:
+            # extend with spaces
+            strAdjusted += ((strTemplateLen - strAdjustedLen) * " ")
+
+        # now anywhere that there isn't a value, make sure there is one.
+        # this doesn't protect against completely invalid datetimes
+        # but could be extended to do so later.
+        strFinal = ""
+        for charGood, charMaybe in zip(strTemplate, strAdjusted):
+            if charMaybe != " ":
+                strFinal += charMaybe
+            else:
+                strFinal += charGood
+
+        return strFinal
         
         
         
