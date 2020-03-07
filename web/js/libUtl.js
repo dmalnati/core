@@ -1,5 +1,16 @@
 'use strict'
 
+
+// https://stackoverflow.com/questions/494143/creating-a-new-dom-element-from-an-html-string-using-built-in-dom-methods-or-pro
+export
+function ToDOM(html)
+{
+    var template = document.createElement('template');
+    html = html.trim(); // Never return a text node of whitespace as the result
+    template.innerHTML = html;
+    return template.content.firstChild;
+}
+
 export
 function Commas(x) {
     return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");

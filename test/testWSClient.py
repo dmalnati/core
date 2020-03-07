@@ -11,8 +11,9 @@ from libWS import *
 
 
 class Handler(WebSocketEventHandler):
-    def __init__(self):
+    def __init__(self, app):
         self.ws = None
+        self.app = app
 
     def OnConnect(self, ws):
         Log("OnConnect")
@@ -24,6 +25,7 @@ class Handler(WebSocketEventHandler):
     def OnClose(self, ws):
         Log("OnClose")
         self.ws = None
+        self.app.Connect()
 
     def OnError(self, ws):
         Log("OnError")
@@ -43,12 +45,15 @@ class App():
         self.connectTo = addr
         self.wsm       = WSManager(os.getpid())
         self.webSocket = None
-        self.handler   = Handler()
+        self.handler   = Handler(self)
+
+    def Connect(self):
+        self.webSocket = self.wsm.Connect(self.handler, self.connectTo)
 
     def Run(self):
         Log("Starting")
 
-        self.webSocket = self.wsm.Connect(self.handler, self.connectTo)
+        self.Connect()
         
         WatchStdinLinesEndLoopOnEOF(self.OnKeyboardInput)
         

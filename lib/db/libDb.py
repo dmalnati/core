@@ -578,6 +578,22 @@ class Record():
             self.Overwrite(rowList[0])
         
         return retVal
+
+    def ReadById(self):
+        retVal = False
+        
+        query = """
+                SELECT  ID as rowid, datetime(TIMESTAMP, 'localtime') AS TIMESTAMP, *
+                FROM    %s
+                WHERE   rowid = %s
+                """ % (self.table.tableName, self.GetRowId())
+    
+        retVal, rowList = self.table.db.Query(query)
+        
+        if retVal:
+            self.Overwrite(rowList[0])
+        
+        return retVal
     
     def Insert(self):
         retVal = False
