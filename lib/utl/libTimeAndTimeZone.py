@@ -1,5 +1,6 @@
 import datetime
 import pytz
+from tzlocal import get_localzone
 
 
 #
@@ -35,7 +36,7 @@ class TimeAndTimeZone():
 
     # Static
     def GetTimeZoneLocal(self):
-        return str(datetime.datetime.now(datetime.timezone(datetime.timedelta(0))).astimezone().tzinfo)
+        return str(get_localzone())
 
 
 
