@@ -229,7 +229,29 @@ class Database():
             
         return retVal
     
+    # Deal with concurrency exceptions
+    # basically, if the database is locked doing some other process' work, then
+    # exceptions can get thrown after a timeout goes off.
+    # I am not interested in this, so simply re-try until something other than
+    # a timeout exception occurs.
+    def Commit(self):
+        if self.conn:
+            tryAgain = True
+            
+            while tryAgain:
+                try:
+                    self.conn.commit()
+                    tryAgain = False
+                except sqlite3.OperationalError as e:
+                    if str(e) == "disk I/O error":
+                        Log("Database gone, aborting")
+                        sys.exit(1)
+
+                    time.sleep(0.050)
+                except Exception as e:
+                    raise e
     
+
     def GetLastError(self):
         return self.e
         
@@ -329,7 +351,7 @@ class Database():
         retVal = self.batchCount
         
         if self.batchCount:
-            self.conn.commit()
+            self.Commit()
         
         self.batchOn    = False
         self.batchCount = 0
@@ -345,7 +367,7 @@ class Database():
             retVal = False
         
         if self.batchOn == False:
-            self.conn.commit()
+            self.Commit()
         else:
             self.batchCount += 1
         
