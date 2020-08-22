@@ -131,15 +131,17 @@ def PreprocessInput(byteList):
     useByte = True
 
     for byte in byteList:
+        byteChar = chr(byte)
+
         useByte = True
 
         if FLAG_NNL:
-            if byte == "\n":
+            if byteChar == '\n':
                 useByte = False
 
         if FLAG_NTOR:
-            if byte == "\n":
-                byte = "\r"
+            if byteChar == '\n':
+                byte = ord('\r')
 
         if useByte:
             byteListNew.append(byte)
